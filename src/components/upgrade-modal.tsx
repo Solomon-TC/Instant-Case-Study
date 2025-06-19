@@ -13,12 +13,18 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Check, Crown, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { loadStripe } from "@stripe/stripe-js";
 
 interface UpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   userEmail: string;
 }
+
+// Initialize Stripe
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
+);
 
 export default function UpgradeModal({
   isOpen,
@@ -32,6 +38,7 @@ export default function UpgradeModal({
     setIsLoading(true);
 
     try {
+      // Create checkout session
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: {
@@ -43,21 +50,38 @@ export default function UpgradeModal({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create checkout session");
+        const errorData = await response.json();
+        console.error("Checkout session creation failed:", errorData);
+        throw new Error(errorData.error || "Failed to create checkout session");
       }
 
-      const { url } = await response.json();
+      const { sessionId } = await response.json();
 
-      if (url) {
-        window.location.href = url;
-      } else {
-        throw new Error("No checkout URL received");
+      if (!sessionId) {
+        throw new Error("No session ID received from server");
+      }
+
+      // Load Stripe and redirect to checkout
+      const stripe = await stripePromise;
+      if (!stripe) {
+        throw new Error("Stripe.js failed to load");
+      }
+
+      console.log("Redirecting to Stripe checkout with session:", sessionId);
+      const { error } = await stripe.redirectToCheckout({ sessionId });
+
+      if (error) {
+        console.error("Stripe redirectToCheckout error:", error);
+        throw new Error(error.message || "Failed to redirect to checkout");
       }
     } catch (error) {
-      console.error("Error creating checkout session:", error);
+      console.error("Error during checkout process:", error);
       toast({
         title: "Error",
-        description: "Failed to start checkout process. Please try again.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to start checkout process. Please try again.",
         variant: "destructive",
       });
     } finally {

@@ -1,7 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate environment variables
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    const stripePriceId = process.env.STRIPE_PRICE_ID;
+    const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
+    if (!stripeSecretKey || !stripePriceId || !stripePublishableKey) {
+      console.error("Missing Stripe environment variables:", {
+        hasSecretKey: !!stripeSecretKey,
+        hasPriceId: !!stripePriceId,
+        hasPublishableKey: !!stripePublishableKey,
+      });
+      return NextResponse.json(
+        { error: "Stripe environment variables are not properly configured" },
+        { status: 500 },
+      );
+    }
+
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: "2024-06-20",
+    });
+
     const body = await request.json();
     const { email } = body;
 
@@ -9,45 +31,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // Create checkout session using Pica passthrough
-    const checkoutBody = new URLSearchParams({
-      "automatic_tax[enabled]": "true",
-      "line_items[0][price]": "price_1QYlGhP8eZXaOcBgmjQZQoVx",
-      "line_items[0][quantity]": "1",
+    // Get the origin for success/cancel URLs
+    const origin = request.headers.get("origin") || request.nextUrl.origin;
+
+    // Create checkout session
+    const session = await stripe.checkout.sessions.create({
       mode: "subscription",
+      line_items: [
+        {
+          price: stripePriceId,
+          quantity: 1,
+        },
+      ],
       customer_email: email,
-      success_url: `${process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL || request.nextUrl.origin}/`,
+      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/`,
+      automatic_tax: {
+        enabled: true,
+      },
     });
 
-    const response = await fetch(
-      "https://api.picaos.com/v1/passthrough/v1/checkout/sessions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "x-pica-secret": process.env.PICA_SECRET_KEY!,
-          "x-pica-connection-key": process.env.PICA_STRIPE_CONNECTION_KEY!,
-          "x-pica-action-id":
-            "conn_mod_def::GCmLNSLWawg::Pj6pgAmnQhuqMPzB8fquRg",
-        },
-        body: checkoutBody.toString(),
-      },
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Stripe API error:", errorText);
-      throw new Error(`Stripe API error: ${response.statusText}`);
-    }
-
-    const session = await response.json();
-
-    return NextResponse.json({ url: session.url });
+    console.log("Checkout session created successfully:", session.id);
+    return NextResponse.json({ sessionId: session.id });
   } catch (error) {
     console.error("Error creating checkout session:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to create checkout session" },
       { status: 500 },
     );
   }
