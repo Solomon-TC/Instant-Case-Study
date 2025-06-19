@@ -65,9 +65,16 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps = {}) {
         } else {
           setMessage("Successfully signed in!");
           setIsSuccess(true);
-          if (onAuthSuccess) {
-            onAuthSuccess();
-          }
+          console.log(
+            "Authentication successful, calling onAuthSuccess callback",
+          );
+
+          // Small delay to ensure auth state is updated
+          setTimeout(() => {
+            if (onAuthSuccess) {
+              onAuthSuccess();
+            }
+          }, 100);
         }
       }
     } catch (error) {

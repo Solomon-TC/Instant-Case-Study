@@ -1,17 +1,14 @@
 "use client";
 
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserSupabaseClient } from "@supabase/auth-helpers-nextjs";
+import type { Database } from "@/types/supabase";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Single browser client instance for session persistence
+export const supabase = createBrowserSupabaseClient<Database>();
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
+// Use the same client instance to ensure session persistence
 export function createSupabaseClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
-  );
+  return supabase;
 }
 
 export interface CaseStudy {

@@ -78,38 +78,88 @@ export default function Page() {
 
   // Auth and user profile management
   useEffect(() => {
-    const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+    let isMounted = true;
 
-      if (session?.user) {
-        await fetchUserProfile(session.user.id);
+    const initializeAuth = async () => {
+      try {
+        console.log("Initializing auth...");
+
+        // Get current user directly
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
+
+        console.log("Current user:", user?.email || "No user", "Error:", error);
+
+        if (isMounted) {
+          if (error) {
+            console.error("Error getting user:", error);
+            setUser(null);
+            setUserProfile(null);
+          } else {
+            setUser(user);
+
+            if (user) {
+              console.log("User found, fetching profile for:", user.id);
+              await fetchUserProfile(user.id);
+            } else {
+              console.log("No user found");
+              setUserProfile(null);
+            }
+          }
+
+          console.log("Setting loading to false");
+        }
+      } catch (error) {
+        console.error("Error in initializeAuth:", error);
+        if (isMounted) {
+          setUser(null);
+          setUserProfile(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-
-      setIsLoading(false);
     };
 
-    getSession();
+    initializeAuth();
 
+    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
+      console.log(
+        "Auth state changed:",
+        event,
+        session?.user?.email || "No user",
+      );
 
-      if (session?.user) {
-        await fetchUserProfile(session.user.id);
-      } else {
-        setUserProfile(null);
+      if (isMounted) {
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          console.log(
+            "Auth change - fetching user profile for:",
+            session.user.id,
+          );
+          await fetchUserProfile(session.user.id);
+        } else {
+          setUserProfile(null);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log("Fetching user profile for ID:", userId);
       const { data, error } = await supabase
         .from("users")
         .select("*")
@@ -118,12 +168,36 @@ export default function Page() {
 
       if (error) {
         console.error("Error fetching user profile:", error);
+        // If user doesn't exist in users table, create one
+        if (error.code === "PGRST116") {
+          console.log("User profile not found, creating new profile...");
+          const { data: authUser } = await supabase.auth.getUser();
+          const { data: newUser, error: createError } = await supabase
+            .from("users")
+            .insert({
+              id: userId,
+              email: authUser.user?.email || "",
+              is_pro: false,
+              generation_count: 0,
+            })
+            .select()
+            .single();
+
+          if (createError) {
+            console.error("Error creating user profile:", createError);
+            return;
+          }
+
+          console.log("New user profile created:", newUser);
+          setUserProfile(newUser);
+        }
         return;
       }
 
+      console.log("User profile fetched successfully:", data);
       setUserProfile(data);
     } catch (error) {
-      console.error("Error fetching user profile:", error);
+      console.error("Error in fetchUserProfile:", error);
     }
   };
 
@@ -338,17 +412,40 @@ export default function Page() {
   };
 
   // Show loading state
+  console.log("isLoading:", isLoading);
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
 
   // Show auth form if not logged in
   if (!user) {
-    return <AuthForm />;
+    return (
+      <AuthForm
+        onAuthSuccess={() => {
+          console.log("Auth success callback triggered, refreshing user...");
+          // Force a user refresh after successful auth
+          supabase.auth.getUser().then(({ data: { user }, error }) => {
+            console.log(
+              "Auth success - user refresh:",
+              user?.email || "No user",
+              "Error:",
+              error,
+            );
+            if (user && !error) {
+              setUser(user);
+              fetchUserProfile(user.id);
+            }
+          });
+        }}
+      />
+    );
   }
 
   const remainingGenerations = userProfile?.is_pro
