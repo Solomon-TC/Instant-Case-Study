@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       tone,
       industry,
       clientQuote,
+      userId,
     } = body;
 
     // Validate required fields
@@ -31,11 +32,32 @@ export async function POST(request: NextRequest) {
       !solution ||
       !result ||
       !tone ||
-      !industry
+      !industry ||
+      !userId
     ) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 },
+      );
+    }
+
+    // Check user's pro status and generation count
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("is_pro, generation_count")
+      .eq("id", userId)
+      .single();
+
+    if (userError) {
+      console.error("Error fetching user:", userError);
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Check if user has reached generation limit
+    if (!user.is_pro && user.generation_count >= 3) {
+      return NextResponse.json(
+        { error: "Generation limit reached. Please upgrade to Pro." },
+        { status: 403 },
       );
     }
 
@@ -116,9 +138,22 @@ ${generatedCaseStudy}`;
         industry,
         client_quote: clientQuote || null,
         ai_output: generatedCaseStudy,
+        user_id: userId,
       })
       .select()
       .single();
+
+    // Increment user's generation count if not pro
+    if (!user.is_pro) {
+      const { error: incrementError } = await supabase.rpc(
+        "increment_generation_count",
+        { user_id: userId },
+      );
+
+      if (incrementError) {
+        console.error("Error incrementing generation count:", incrementError);
+      }
+    }
 
     if (supabaseError) {
       console.error("Error saving to Supabase:", supabaseError);

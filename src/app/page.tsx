@@ -13,8 +13,16 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { supabase, type CaseStudy } from "@/lib/supabase";
-import { FileDown, Copy, ExternalLink } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  createSupabaseClient,
+  type CaseStudy,
+  type User,
+} from "@/lib/supabase";
+import { FileDown, Copy, LogOut, Crown, AlertTriangle } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import AuthForm from "@/components/auth-form";
+import UpgradeModal from "@/components/upgrade-modal";
 
 interface FormData {
   clientType: string;
@@ -43,6 +51,13 @@ const industryOptions = [
 ];
 
 export default function Page() {
+  const [user, setUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const supabase = createSupabaseClient();
+  const { toast } = useToast();
+
   const [formData, setFormData] = useState<FormData>({
     clientType: "",
     challenge: "",
@@ -61,15 +76,78 @@ export default function Page() {
   );
   const [isLoadingPrevious, setIsLoadingPrevious] = useState(true);
 
+  // Auth and user profile management
+  useEffect(() => {
+    const getSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
+      }
+
+      setIsLoading(false);
+    };
+
+    getSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        await fetchUserProfile(session.user.id);
+      } else {
+        setUserProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        return;
+      }
+
+      setUserProfile(data);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setUserProfile(null);
+    setPreviousCaseStudies([]);
+    setGeneratedCaseStudy("");
+    setSocialMediaText("");
+  };
+
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const fetchPreviousCaseStudies = async () => {
+    if (!user) return;
+
     try {
       const { data, error } = await supabase
         .from("case_studies")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(10);
 
@@ -87,10 +165,27 @@ export default function Page() {
   };
 
   useEffect(() => {
-    fetchPreviousCaseStudies();
-  }, []);
+    if (user) {
+      fetchPreviousCaseStudies();
+    }
+  }, [user]);
 
   const generateCaseStudy = async () => {
+    if (!user || !userProfile) {
+      toast({
+        title: "Error",
+        description: "Please sign in to generate case studies.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if user has reached limit
+    if (!userProfile.is_pro && userProfile.generation_count >= 3) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
@@ -99,26 +194,45 @@ export default function Page() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          userId: user.id,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to generate case study");
+        const errorData = await response.json();
+        if (response.status === 403) {
+          setShowUpgradeModal(true);
+          return;
+        }
+        throw new Error(errorData.error || "Failed to generate case study");
       }
 
       const data = await response.json();
       setGeneratedCaseStudy(data.caseStudy);
       setSocialMediaText(data.socialMediaText || "");
 
-      // Refresh the previous case studies list
+      // Refresh user profile and case studies
       if (data.saved) {
+        await fetchUserProfile(user.id);
         fetchPreviousCaseStudies();
       }
+
+      toast({
+        title: "Success!",
+        description: "Your case study has been generated.",
+      });
     } catch (error) {
       console.error("Error generating case study:", error);
-      setGeneratedCaseStudy(
-        "Sorry, there was an error generating your case study. Please try again.",
-      );
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate case study. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsGenerating(false);
     }
@@ -223,18 +337,81 @@ export default function Page() {
     window.open(urls[platform as keyof typeof urls], "_blank");
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Show auth form if not logged in
+  if (!user) {
+    return <AuthForm />;
+  }
+
+  const remainingGenerations = userProfile?.is_pro
+    ? "Unlimited"
+    : Math.max(0, 3 - (userProfile?.generation_count || 0));
+  const showLimitWarning =
+    !userProfile?.is_pro && (userProfile?.generation_count || 0) >= 2;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Instant Case Study
-          </h1>
-          <p className="text-lg text-gray-600">
-            Transform your project wins into compelling case studies in minutes
-          </p>
+        <div className="flex justify-between items-center mb-8">
+          <div className="text-center flex-1">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              Instant Case Study
+            </h1>
+            <p className="text-lg text-gray-600">
+              Transform your project wins into compelling case studies in
+              minutes
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {userProfile?.is_pro && (
+              <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                <Crown className="h-4 w-4" />
+                Pro
+              </div>
+            )}
+
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Welcome, {user.email}</p>
+              <p className="text-xs text-gray-500">
+                Generations: {remainingGenerations}
+              </p>
+            </div>
+
+            <Button variant="outline" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
+
+        {/* Generation Limit Warning */}
+        {showLimitWarning && (
+          <Alert className="mb-6 border-orange-200 bg-orange-50">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+              You have {remainingGenerations} generation
+              {remainingGenerations !== 1 ? "s" : ""} remaining.
+              <Button
+                variant="link"
+                className="p-0 h-auto text-orange-800 underline"
+                onClick={() => setShowUpgradeModal(true)}
+              >
+                Upgrade to Pro
+              </Button>{" "}
+              for unlimited access.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Form */}
         <Card className="mb-8">
@@ -357,11 +534,19 @@ export default function Page() {
                 type="submit"
                 className="w-full"
                 size="lg"
-                disabled={!isFormValid || isGenerating}
+                disabled={
+                  !isFormValid ||
+                  isGenerating ||
+                  (!userProfile?.is_pro &&
+                    (userProfile?.generation_count || 0) >= 3)
+                }
               >
                 {isGenerating
                   ? "Generating Your Case Study..."
-                  : "Generate My Case Study"}
+                  : !userProfile?.is_pro &&
+                      (userProfile?.generation_count || 0) >= 3
+                    ? "Upgrade to Generate More"
+                    : "Generate My Case Study"}
               </Button>
             </form>
           </CardContent>
@@ -544,6 +729,13 @@ export default function Page() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        userEmail={user?.email || ""}
+      />
     </div>
   );
 }
