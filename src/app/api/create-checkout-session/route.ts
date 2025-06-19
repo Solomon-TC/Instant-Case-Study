@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     });
 
     const body = await request.json();
-    const { email } = body;
+    const { email, promoCode } = body;
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -33,6 +33,37 @@ export async function POST(request: NextRequest) {
 
     // Get the origin for success/cancel URLs
     const origin = request.headers.get("origin") || request.nextUrl.origin;
+
+    let discounts = undefined;
+
+    // Handle promo code validation if provided
+    if (promoCode && promoCode.trim()) {
+      try {
+        // Search for active promotion code matching the provided code
+        const promoCodes = await stripe.promotionCodes.list({
+          code: promoCode.trim(),
+          active: true,
+          limit: 1,
+        });
+
+        if (promoCodes.data.length > 0) {
+          discounts = [{ promotion_code: promoCodes.data[0].id }];
+          console.log("Valid promo code found:", promoCode);
+        } else {
+          console.log("Invalid or inactive promo code:", promoCode);
+          return NextResponse.json(
+            { error: "Invalid or expired promo code" },
+            { status: 400 },
+          );
+        }
+      } catch (promoError) {
+        console.error("Error validating promo code:", promoError);
+        return NextResponse.json(
+          { error: "Failed to validate promo code" },
+          { status: 400 },
+        );
+      }
+    }
 
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
@@ -49,6 +80,7 @@ export async function POST(request: NextRequest) {
       automatic_tax: {
         enabled: true,
       },
+      ...(discounts && { discounts }),
     });
 
     console.log("Checkout session created successfully:", session.id);

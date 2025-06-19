@@ -11,7 +11,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import { Check, Crown, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Check, Crown, Loader2, Tag } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { loadStripe } from "@stripe/stripe-js";
 
@@ -32,6 +34,7 @@ export default function UpgradeModal({
   userEmail,
 }: UpgradeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
   const { toast } = useToast();
 
   const handleUpgrade = async () => {
@@ -46,6 +49,7 @@ export default function UpgradeModal({
         },
         body: JSON.stringify({
           email: userEmail,
+          promoCode: promoCode.trim() || undefined,
         }),
       });
 
@@ -129,6 +133,22 @@ export default function UpgradeModal({
           </CardContent>
         </Card>
 
+        <div className="space-y-2">
+          <Label htmlFor="promo-code" className="flex items-center gap-2">
+            <Tag className="h-4 w-4" />
+            Promo Code (Optional)
+          </Label>
+          <Input
+            id="promo-code"
+            type="text"
+            placeholder="Enter promo code (e.g., SUMMER25)"
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value)}
+            disabled={isLoading}
+            className="w-full"
+          />
+        </div>
+
         <DialogFooter className="flex-col sm:flex-col gap-2">
           <Button
             onClick={handleUpgrade}
@@ -142,7 +162,7 @@ export default function UpgradeModal({
                 Processing...
               </>
             ) : (
-              "Upgrade Now"
+              "Start Checkout"
             )}
           </Button>
           <Button
