@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2024-06-20",
+      apiVersion: "2023-10-16", // Using supported version - upgrade to "2024-06-20" when type definitions are updated
     });
 
     const body = await request.json();
