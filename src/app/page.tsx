@@ -255,7 +255,7 @@ export default function Page() {
     }
 
     // Check if user has reached limit
-    if (!userProfile.is_pro && userProfile.generation_count >= 3) {
+    if (!userProfile.is_pro && (userProfile.generation_count ?? 0) >= 3) {
       setShowUpgradeModal(true);
       return;
     }
