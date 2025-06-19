@@ -20,9 +20,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2023-10-16", // Using supported version - upgrade to "2024-06-20" when type definitions are updated
-    });
+    const stripe = new Stripe(stripeSecretKey);
 
     const body = await request.json();
     const { email, promoCode } = body;
