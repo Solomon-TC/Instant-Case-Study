@@ -1,4 +1,5 @@
 import { TempoInit } from "@/components/tempo-init";
+import { Toaster } from "@/components/ui/toaster";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
@@ -21,6 +22,7 @@ export default function RootLayout({
       <Script src="https://api.tempolabs.ai/proxy-asset?url=https://storage.googleapis.com/tempo-public-assets/error-handling.js" />
       <body className={inter.className}>
         {children}
+        <Toaster />
         <TempoInit />
       </body>
     </html>
