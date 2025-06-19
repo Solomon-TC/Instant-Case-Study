@@ -21,6 +21,7 @@ export type Database = {
           result: string
           solution: string
           tone: string
+          user_id: string | null
         }
         Insert: {
           ai_output: string
@@ -33,6 +34,7 @@ export type Database = {
           result: string
           solution: string
           tone: string
+          user_id?: string | null
         }
         Update: {
           ai_output?: string
@@ -45,6 +47,42 @@ export type Database = {
           result?: string
           solution?: string
           tone?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_studies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string | null
+          email: string
+          generation_count: number | null
+          id: string
+          is_pro: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          generation_count?: number | null
+          id: string
+          is_pro?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          generation_count?: number | null
+          id?: string
+          is_pro?: boolean | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -53,7 +91,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_generation_count: {
+        Args: { user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
