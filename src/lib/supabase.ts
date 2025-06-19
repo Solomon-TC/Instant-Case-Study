@@ -13,7 +13,7 @@ export function createSupabaseClient() {
 
 export interface CaseStudy {
   id: string;
-  created_at: string;
+  created_at: string | null;
   client_type: string;
   challenge: string;
   solution: string;
@@ -22,7 +22,7 @@ export interface CaseStudy {
   industry: string;
   client_quote: string | null;
   ai_output: string;
-  user_id?: string;
+  user_id: string | null;
 }
 
 export interface User {
