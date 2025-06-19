@@ -28,10 +28,10 @@ export interface CaseStudy {
 export interface User {
   id: string;
   email: string;
-  is_pro: boolean;
-  generation_count: number;
-  created_at: string;
-  updated_at: string;
+  is_pro: boolean | null;
+  generation_count: number | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export async function getUserProfile(userId: string): Promise<User | null> {
