@@ -8,10 +8,18 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!,
-);
+// Validate required environment variables for server-side Supabase client
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl) {
+  throw new Error("Missing environment variable: SUPABASE_URL");
+}
+if (!supabaseServiceRoleKey) {
+  throw new Error("Missing environment variable: SUPABASE_SERVICE_ROLE_KEY");
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 export async function POST(request: NextRequest) {
   try {
