@@ -800,9 +800,9 @@ export default function Page() {
                     caseStudy.result.length > 100
                       ? caseStudy.result.substring(0, 100) + "..."
                       : caseStudy.result;
-                  const date = new Date(
-                    caseStudy.created_at,
-                  ).toLocaleDateString();
+                  const date = caseStudy.created_at
+                    ? new Date(caseStudy.created_at).toLocaleDateString()
+                    : "Unknown";
 
                   return (
                     <div
