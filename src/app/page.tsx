@@ -21,6 +21,9 @@ import { useToast } from "@/components/ui/use-toast";
 import AuthForm from "@/components/auth-form";
 import UpgradeModal from "@/components/upgrade-modal";
 
+// Force dynamic rendering to prevent stale cached server rendering
+export const dynamic = "force-dynamic";
+
 interface FormData {
   clientType: string;
   challenge: string;
@@ -52,6 +55,8 @@ export default function Page() {
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Using the persistent singleton supabase client
   const supabase = supabaseBrowser;
   const { toast } = useToast();
 
@@ -73,101 +78,122 @@ export default function Page() {
   );
   const [isLoadingPrevious, setIsLoadingPrevious] = useState(true);
 
-  // Auth and user profile management
+  // Session hydration and user data loading
   useEffect(() => {
-    let isMounted = true;
-    let authInitialized = false;
+    const init = async () => {
+      setIsLoading(true);
+      setError(null);
 
-    const initializeAuth = async () => {
       try {
-        console.log("Initializing auth...");
-
-        // Get current session directly
+        // Get current session
         const {
           data: { session },
-          error,
+          error: sessionError,
         } = await supabase.auth.getSession();
 
-        console.log(
-          "Current session:",
-          session?.user?.email || "No user",
-          "Error:",
-          error,
-        );
-
-        if (isMounted && !authInitialized) {
-          authInitialized = true;
-
-          if (error) {
-            console.error("Error getting session:", error);
-            setUser(null);
-            setUserProfile(null);
-          } else {
-            const user = session?.user ?? null;
-            setUser(user);
-
-            if (user) {
-              console.log("User found, fetching profile for:", user.id);
-              await fetchUserProfile(user.id);
-            } else {
-              console.log("No user found");
-              setUserProfile(null);
-            }
-          }
-
-          console.log("Setting loading to false");
-          setIsLoading(false);
+        if (sessionError) {
+          console.error("Session error:", sessionError);
+          throw new Error("Failed to get session");
         }
-      } catch (error) {
-        console.error("Error in initializeAuth:", error);
-        if (isMounted && !authInitialized) {
-          authInitialized = true;
+
+        if (!session?.user) {
           setUser(null);
           setUserProfile(null);
+          setPreviousCaseStudies([]);
           setIsLoading(false);
+          return;
         }
+
+        // Set user
+        setUser(session.user);
+
+        // Fetch user profile
+        const { data: profile, error: profileError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", session.user.id)
+          .single();
+
+        if (profileError) {
+          // If user doesn't exist in users table, create one
+          if (profileError.code === "PGRST116") {
+            const { data: newUser, error: createError } = await supabase
+              .from("users")
+              .insert({
+                id: session.user.id,
+                email: session.user.email || "",
+                is_pro: false,
+                generation_count: 0,
+              })
+              .select()
+              .single();
+
+            if (createError) {
+              console.error("Error creating user profile:", createError);
+              throw new Error("Failed to create user profile");
+            }
+
+            setUserProfile(newUser);
+          } else {
+            console.error("Profile fetch error:", profileError);
+            throw new Error("Failed to fetch user profile");
+          }
+        } else {
+          setUserProfile(profile);
+        }
+
+        // Fetch case studies
+        const { data: studies, error: studiesError } = await supabase
+          .from("case_studies")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false });
+
+        if (studiesError) {
+          console.error("Case studies fetch error:", studiesError);
+          // Don't throw here, just log and continue with empty array
+          setPreviousCaseStudies([]);
+        } else {
+          setPreviousCaseStudies(studies || []);
+        }
+
+        setIsLoadingPrevious(false);
+      } catch (error) {
+        console.error("Error in session initialization:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to load data",
+        );
+        toast({
+          title: "Error",
+          description: "Failed to load your data. Please refresh the page.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    // Set a timeout to prevent infinite loading
-    const loadingTimeout = setTimeout(() => {
-      if (isMounted && !authInitialized) {
-        console.warn("Auth initialization timeout, setting loading to false");
-        setIsLoading(false);
-      }
-    }, 5000); // 5 second timeout
-
-    initializeAuth();
+    init();
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(
-        "Auth state changed:",
-        event,
-        session?.user?.email || "No user",
-      );
-
-      if (isMounted) {
-        const user = session?.user ?? null;
-        setUser(user);
-
-        if (user) {
-          console.log("Auth change - fetching user profile for:", user.id);
-          await fetchUserProfile(user.id);
-        } else {
-          setUserProfile(null);
-          setPreviousCaseStudies([]);
-          setGeneratedCaseStudy("");
-          setSocialMediaText("");
-        }
+      if (event === "SIGNED_OUT") {
+        setUser(null);
+        setUserProfile(null);
+        setPreviousCaseStudies([]);
+        setGeneratedCaseStudy("");
+        setSocialMediaText("");
+        setError(null);
+        setIsLoading(false);
+      } else if (event === "SIGNED_IN" && session?.user) {
+        // Re-run initialization for sign in
+        init();
       }
     });
 
     return () => {
-      isMounted = false;
-      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -218,33 +244,82 @@ export default function Page() {
 
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Error signing out:", error);
-        toast({
-          title: "Error",
-          description: "Failed to sign out. Please try again.",
-          variant: "destructive",
-        });
-        return;
-      }
+      // Show loading state
+      toast({
+        title: "Signing out...",
+        description: "Please wait while we sign you out.",
+      });
 
-      // Clear local state
+      // Clear local state first to prevent UI flickering
       setUser(null);
       setUserProfile(null);
       setPreviousCaseStudies([]);
       setGeneratedCaseStudy("");
       setSocialMediaText("");
 
-      // Force page reload to ensure clean state
-      window.location.href = "/";
+      // Sign out from Supabase
+      const { error } = await supabase.auth.signOut({
+        scope: "global",
+      });
+
+      if (error) {
+        console.error("Supabase sign out error:", error);
+        // Even if Supabase returns an error, we still want to clear the session locally
+        // This handles cases where the session might be invalid but still stored
+      }
+
+      // Clear any remaining auth cookies manually
+      if (typeof document !== "undefined") {
+        const authCookies = [
+          "sb-access-token",
+          "sb-refresh-token",
+          "supabase-auth-token",
+        ];
+        authCookies.forEach((cookieName) => {
+          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`;
+          document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+        });
+      }
+
+      // Clear localStorage items that might contain auth data
+      if (typeof localStorage !== "undefined") {
+        const authKeys = Object.keys(localStorage).filter(
+          (key) => key.includes("supabase") || key.includes("auth"),
+        );
+        authKeys.forEach((key) => localStorage.removeItem(key));
+      }
+
+      // Success toast
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out of your account.",
+      });
+
+      // Force page reload to ensure completely clean state
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
     } catch (error) {
       console.error("Unexpected error during sign out:", error);
+
+      // Even on error, clear local state and redirect
+      setUser(null);
+      setUserProfile(null);
+      setPreviousCaseStudies([]);
+      setGeneratedCaseStudy("");
+      setSocialMediaText("");
+
       toast({
-        title: "Error",
-        description: "Failed to sign out. Please try again.",
+        title: "Sign out completed",
+        description:
+          "You have been signed out. If you experience any issues, please clear your browser cache.",
         variant: "destructive",
       });
+
+      // Still redirect even on error to ensure user is logged out
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1000);
     }
   };
 
@@ -279,12 +354,6 @@ export default function Page() {
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      fetchPreviousCaseStudies();
-    }
-  }, [user]);
-
   const generateCaseStudy = async () => {
     // Ensure user is authenticated and profile is loaded
     if (!user || !userProfile) {
@@ -297,7 +366,7 @@ export default function Page() {
     }
 
     // Check if user has reached limit
-    if (!userProfile.is_pro && (userProfile.generation_count ?? 0) >= 3) {
+    if (!userProfile.is_pro && userProfile.generation_count >= 3) {
       setShowUpgradeModal(true);
       return;
     }
@@ -332,7 +401,7 @@ export default function Page() {
       // Refresh user profile and case studies only if user is still authenticated
       if (data.saved && user) {
         await fetchUserProfile(user.id);
-        fetchPreviousCaseStudies();
+        await fetchPreviousCaseStudies();
       }
 
       toast({
@@ -454,48 +523,64 @@ export default function Page() {
     window.open(urls[platform as keyof typeof urls], "_blank");
   };
 
-  // Show loading state
-  console.log("isLoading:", isLoading);
+  // Show loading state while session is being loaded
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">Loading your data...</p>
         </div>
       </div>
     );
   }
 
-  // Show auth form if not logged in
+  // Show error state if there was an error loading data
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-red-500 mb-4">
+            <AlertTriangle className="h-12 w-12 mx-auto" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Something went wrong
+          </h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth form if not logged in (only after loading is complete)
   if (!user) {
     return (
       <AuthForm
         onAuthSuccess={() => {
-          console.log("Auth success callback triggered, refreshing session...");
-          // Force a session refresh after successful auth
-          supabase.auth.getSession().then(({ data: { session }, error }) => {
-            console.log(
-              "Auth success - session refresh:",
-              session?.user?.email || "No user",
-              "Error:",
-              error,
-            );
-            if (session?.user && !error) {
-              setUser(session.user);
-              fetchUserProfile(session.user.id);
-            }
-          });
+          // Auth state change will be handled by the useEffect listener
         }}
       />
     );
   }
 
-  const remainingGenerations = userProfile?.is_pro
+  // Show loading if user profile is not yet loaded
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const remainingGenerations = userProfile.is_pro
     ? "Unlimited"
-    : Math.max(0, 3 - (userProfile?.generation_count || 0));
+    : Math.max(0, 3 - userProfile.generation_count);
   const showLimitWarning =
-    !userProfile?.is_pro && (userProfile?.generation_count || 0) >= 2;
+    !userProfile.is_pro && userProfile.generation_count >= 2;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -527,10 +612,12 @@ export default function Page() {
               </p>
             </div>
 
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
+            {user && (
+              <Button variant="outline" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+            )}
           </div>
         </div>
 
@@ -677,14 +764,12 @@ export default function Page() {
                 disabled={
                   !isFormValid ||
                   isGenerating ||
-                  (!userProfile?.is_pro &&
-                    (userProfile?.generation_count || 0) >= 3)
+                  (!userProfile.is_pro && userProfile.generation_count >= 3)
                 }
               >
                 {isGenerating
                   ? "Generating Your Case Study..."
-                  : !userProfile?.is_pro &&
-                      (userProfile?.generation_count || 0) >= 3
+                  : !userProfile.is_pro && userProfile.generation_count >= 3
                     ? "Upgrade to Generate More"
                     : "Generate My Case Study"}
               </Button>

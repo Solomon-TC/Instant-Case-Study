@@ -5,6 +5,9 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 
+// Force dynamic rendering to prevent stale cached server rendering
+export const dynamic = "force-dynamic";
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
