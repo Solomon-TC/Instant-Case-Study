@@ -24,7 +24,7 @@ console.log("Environment variables loaded (excluding secrets):", {
 });
 
 const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: "2024-06-20",
+  apiVersion: "2025-05-28.basil",
 });
 
 export async function POST(request: NextRequest) {
