@@ -107,25 +107,25 @@ export async function POST(request: NextRequest) {
     console.log(`✅ Successfully updated user ${userId} to pro status`);
   }
 
-  try {
-    // Helper function to find user by email
-    async function findUserByEmail(email: string): Promise<string | null> {
-      const { data, error } = await supabaseAdmin
-        .from("users")
-        .select("id")
-        .eq("email", email)
-        .single();
+  // Helper function to find user by email
+  async function findUserByEmail(email: string): Promise<string | null> {
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .single();
 
-      if (error) {
-        if (error.code !== "PGRST116") {
-          // PGRST116 = no rows found
-          console.error("Error finding user by email:", error);
-        }
-        return null;
+    if (error) {
+      if (error.code !== "PGRST116") {
+        // PGRST116 = no rows found
+        console.error("Error finding user by email:", error);
       }
-      return data?.id ?? null;
+      return null;
     }
+    return data?.id ?? null;
+  }
 
+  try {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
