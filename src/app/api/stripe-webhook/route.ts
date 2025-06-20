@@ -142,9 +142,11 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
-              const rawEmail = (customer as Stripe.Customer).email;
-              const email: string | undefined = rawEmail ?? undefined;
-              userId = await findUserByEmail(email);
+              userId = await findUserByEmail(
+                ((customer as Stripe.Customer).email ?? undefined) as
+                  | string
+                  | undefined,
+              );
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
@@ -201,9 +203,11 @@ export async function POST(request: NextRequest) {
             try {
               const customer = await stripe.customers.retrieve(customerId);
               if (!customer.deleted) {
-                const rawEmail = (customer as Stripe.Customer).email;
-                const email: string | undefined = rawEmail ?? undefined;
-                userId = await findUserByEmail(email);
+                userId = await findUserByEmail(
+                  ((customer as Stripe.Customer).email ?? undefined) as
+                    | string
+                    | undefined,
+                );
               }
             } catch (error) {
               console.error("Error retrieving customer from Stripe:", error);
@@ -253,9 +257,11 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
-              const rawEmail = (customer as Stripe.Customer).email;
-              const email: string | undefined = rawEmail ?? undefined;
-              userId = await findUserByEmail(email);
+              userId = await findUserByEmail(
+                ((customer as Stripe.Customer).email ?? undefined) as
+                  | string
+                  | undefined,
+              );
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
