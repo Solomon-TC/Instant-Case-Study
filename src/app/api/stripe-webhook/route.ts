@@ -141,11 +141,9 @@ export async function POST(request: NextRequest) {
         if (!userId && customerId) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
-            if (!customer.deleted && (customer as Stripe.Customer).email) {
+            if (!customer.deleted) {
               const email = (customer as Stripe.Customer).email;
-              if (typeof email === "string") {
-                userId = await findUserByEmail(email);
-              }
+              userId = await findUserByEmail(email);
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
@@ -201,11 +199,9 @@ export async function POST(request: NextRequest) {
           if (!userId && customerId) {
             try {
               const customer = await stripe.customers.retrieve(customerId);
-              if (!customer.deleted && (customer as Stripe.Customer).email) {
+              if (!customer.deleted) {
                 const email = (customer as Stripe.Customer).email;
-                if (typeof email === "string") {
-                  userId = await findUserByEmail(email);
-                }
+                userId = await findUserByEmail(email);
               }
             } catch (error) {
               console.error("Error retrieving customer from Stripe:", error);
@@ -254,11 +250,9 @@ export async function POST(request: NextRequest) {
         if (!userId && customerId) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
-            if (!customer.deleted && (customer as Stripe.Customer).email) {
+            if (!customer.deleted) {
               const email = (customer as Stripe.Customer).email;
-              if (typeof email === "string") {
-                userId = await findUserByEmail(email);
-              }
+              userId = await findUserByEmail(email);
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
