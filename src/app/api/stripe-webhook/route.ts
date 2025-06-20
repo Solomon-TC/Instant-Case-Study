@@ -57,7 +57,7 @@ async function updateUser(userId: string) {
 
 // Helper function to find user by email
 async function findUserByEmail(
-  email: string | null | undefined,
+  email: string | undefined,
 ): Promise<string | null> {
   if (!email) return null;
 
@@ -142,7 +142,9 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
-              const email = (customer as Stripe.Customer).email;
+              const rawEmail = (customer as Stripe.Customer).email;
+              const email: string | undefined =
+                rawEmail === null ? undefined : rawEmail;
               userId = await findUserByEmail(email);
             }
           } catch (error) {
@@ -200,7 +202,9 @@ export async function POST(request: NextRequest) {
             try {
               const customer = await stripe.customers.retrieve(customerId);
               if (!customer.deleted) {
-                const email = (customer as Stripe.Customer).email;
+                const rawEmail = (customer as Stripe.Customer).email;
+                const email: string | undefined =
+                  rawEmail === null ? undefined : rawEmail;
                 userId = await findUserByEmail(email);
               }
             } catch (error) {
@@ -251,7 +255,9 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
-              const email = (customer as Stripe.Customer).email;
+              const rawEmail = (customer as Stripe.Customer).email;
+              const email: string | undefined =
+                rawEmail === null ? undefined : rawEmail;
               userId = await findUserByEmail(email);
             }
           } catch (error) {
