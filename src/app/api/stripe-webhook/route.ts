@@ -56,11 +56,7 @@ async function updateUser(userId: string) {
 }
 
 // Helper function to find user by email
-async function findUserByEmail(
-  email: string | undefined,
-): Promise<string | null> {
-  if (!email) return null;
-
+async function findUserByEmail(email: string): Promise<string | null> {
   const { data, error } = await supabaseAdmin
     .from("users")
     .select("id")
@@ -68,12 +64,10 @@ async function findUserByEmail(
     .single();
 
   if (error) {
-    if (error.code !== "PGRST116") {
-      // PGRST116 = no rows found
-      console.error("Error finding user by email:", error);
-    }
+    console.error("Error finding user by email:", error);
     return null;
   }
+
   return data?.id ?? null;
 }
 
