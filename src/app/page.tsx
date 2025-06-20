@@ -366,7 +366,7 @@ export default function Page() {
     }
 
     // Check if user has reached limit
-    if (!userProfile.is_pro && userProfile.generation_count >= 3) {
+    if (!userProfile.is_pro && (userProfile.generation_count ?? 0) >= 3) {
       setShowUpgradeModal(true);
       return;
     }
@@ -578,9 +578,9 @@ export default function Page() {
 
   const remainingGenerations = userProfile.is_pro
     ? "Unlimited"
-    : Math.max(0, 3 - userProfile.generation_count);
+    : Math.max(0, 3 - (userProfile.generation_count ?? 0));
   const showLimitWarning =
-    !userProfile.is_pro && userProfile.generation_count >= 2;
+    !userProfile.is_pro && (userProfile.generation_count ?? 0) >= 2;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -764,12 +764,14 @@ export default function Page() {
                 disabled={
                   !isFormValid ||
                   isGenerating ||
-                  (!userProfile.is_pro && userProfile.generation_count >= 3)
+                  (!userProfile.is_pro &&
+                    (userProfile.generation_count ?? 0) >= 3)
                 }
               >
                 {isGenerating
                   ? "Generating Your Case Study..."
-                  : !userProfile.is_pro && userProfile.generation_count >= 3
+                  : !userProfile.is_pro &&
+                      (userProfile.generation_count ?? 0) >= 3
                     ? "Upgrade to Generate More"
                     : "Generate My Case Study"}
               </Button>
