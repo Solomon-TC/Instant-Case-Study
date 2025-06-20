@@ -36,6 +36,43 @@ const supabaseAdmin = createClient<Database>(
   },
 );
 
+// Helper function to update user in Supabase
+async function updateUser(userId: string) {
+  const { error } = await supabaseAdmin
+    .from("users")
+    .update({
+      is_pro: true,
+      generation_count: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", userId);
+
+  if (error) {
+    console.error("❌ Error updating user is_pro status:", error);
+    throw error;
+  }
+
+  console.log(`✅ Successfully updated user ${userId} to pro status`);
+}
+
+// Helper function to find user by email
+async function findUserByEmail(email: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .select("id")
+    .eq("email", email)
+    .single();
+
+  if (error) {
+    if (error.code !== "PGRST116") {
+      // PGRST116 = no rows found
+      console.error("Error finding user by email:", error);
+    }
+    return null;
+  }
+  return data?.id ?? null;
+}
+
 /**
  * Stripe Webhook Handler
  * Handles all relevant Stripe subscription and payment events
@@ -88,43 +125,6 @@ export async function POST(request: NextRequest) {
     return new NextResponse("OK", { status: 200 });
   }
 
-  // Helper function to update user in Supabase
-  async function updateUser(userId: string) {
-    const { error } = await supabaseAdmin
-      .from("users")
-      .update({
-        is_pro: true,
-        generation_count: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
-
-    if (error) {
-      console.error("❌ Error updating user is_pro status:", error);
-      throw error;
-    }
-
-    console.log(`✅ Successfully updated user ${userId} to pro status`);
-  }
-
-  // Helper function to find user by email
-  async function findUserByEmail(email: string): Promise<string | null> {
-    const { data, error } = await supabaseAdmin
-      .from("users")
-      .select("id")
-      .eq("email", email)
-      .single();
-
-    if (error) {
-      if (error.code !== "PGRST116") {
-        // PGRST116 = no rows found
-        console.error("Error finding user by email:", error);
-      }
-      return null;
-    }
-    return data?.id ?? null;
-  }
-
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -138,8 +138,10 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted && (customer as Stripe.Customer).email) {
-              const email = (customer as Stripe.Customer).email!;
-              userId = await findUserByEmail(email);
+              const email = (customer as Stripe.Customer).email;
+              if (email !== null) {
+                userId = await findUserByEmail(email);
+              }
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
@@ -196,8 +198,10 @@ export async function POST(request: NextRequest) {
             try {
               const customer = await stripe.customers.retrieve(customerId);
               if (!customer.deleted && (customer as Stripe.Customer).email) {
-                const email = (customer as Stripe.Customer).email!;
-                userId = await findUserByEmail(email);
+                const email = (customer as Stripe.Customer).email;
+                if (email !== null) {
+                  userId = await findUserByEmail(email);
+                }
               }
             } catch (error) {
               console.error("Error retrieving customer from Stripe:", error);
@@ -247,8 +251,10 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted && (customer as Stripe.Customer).email) {
-              const email = (customer as Stripe.Customer).email!;
-              userId = await findUserByEmail(email);
+              const email = (customer as Stripe.Customer).email;
+              if (email !== null) {
+                userId = await findUserByEmail(email);
+              }
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
