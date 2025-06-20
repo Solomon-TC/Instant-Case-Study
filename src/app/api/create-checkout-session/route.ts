@@ -20,9 +20,9 @@ if (missingVars.length > 0) {
   );
 }
 
-// Initialize Stripe with stable API version
+// Initialize Stripe with latest API version
 const stripe = new Stripe(requiredEnvVars.STRIPE_SECRET_KEY!, {
-  apiVersion: "2023-08-16", // Use stable API version
+  apiVersion: "2025-05-28.basil", // Use latest API version
 });
 
 export async function POST(request: NextRequest) {
