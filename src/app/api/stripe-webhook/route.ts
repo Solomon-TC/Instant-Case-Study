@@ -1,99 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-export const runtime = "nodejs";
+export const config = {
+  api: {
+    bodyParser: false, // Disable Next.js body parsing to handle raw body
+  },
+};
 
-if (!process.env.SUPABASE_URL) {
-  throw new Error("Missing SUPABASE_URL environment variable");
-}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: "2024-12-18.acacia",
+});
 
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY environment variable");
-}
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: { persistSession: false },
+  },
 );
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.text();
-    const signature = request.headers.get("stripe-signature");
-
-    if (!signature) {
-      return NextResponse.json(
-        { error: "No signature provided" },
-        { status: 400 },
-      );
-    }
-
-    // Parse the webhook payload
-    let event;
-    try {
-      event = JSON.parse(body);
-    } catch (err) {
-      console.error("Error parsing webhook body:", err);
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
-
-    // Handle the event
-    switch (event.type) {
-      case "checkout.session.completed":
-        const session = event.data.object;
-        const customerEmail = session.customer_email;
-
-        if (customerEmail) {
-          // Find user by email and update their pro status
-          const { data: user, error: userError } = await supabase
-            .from("users")
-            .select("id")
-            .eq("email", customerEmail)
-            .single();
-
-          if (userError) {
-            console.error("Error finding user:", userError);
-            break;
-          }
-
-          if (user) {
-            const { error: updateError } = await supabase
-              .from("users")
-              .update({
-                is_pro: true,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", user.id);
-
-            if (updateError) {
-              console.error("Error updating user pro status:", updateError);
-            } else {
-              console.log(`Updated user ${user.id} to pro status`);
-            }
-          }
-        }
-        break;
-
-      case "customer.subscription.deleted":
-        // Handle subscription cancellation
-        const subscription = event.data.object;
-        const customerId = subscription.customer;
-
-        // You would need to store customer ID to map back to user
-        // For now, we'll skip this implementation
-        console.log("Subscription cancelled for customer:", customerId);
-        break;
-
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error("Webhook error:", error);
-    return NextResponse.json(
-      { error: "Webhook handler failed" },
-      { status: 500 },
-    );
+async function buffer(readable: ReadableStream<Uint8Array>) {
+  const chunks: Uint8Array[] = [];
+  const reader = readable.getReader();
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
   }
+  return Buffer.concat(chunks);
+}
+
+export async function POST(req: NextRequest) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+  let event: Stripe.Event;
+
+  try {
+    const rawBody = await buffer(req.body!);
+    const signature = req.headers.get("stripe-signature")!;
+
+    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+  } catch (err) {
+    console.error("⚠️ Webhook signature verification failed.", err);
+    // Return 200 to avoid repeated webhook attempts
+    return NextResponse.json({ received: true }, { status: 200 });
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const email = session.customer_details?.email;
+
+    if (email) {
+      try {
+        const { error } = await supabaseAdmin
+          .from("users")
+          .update({ is_pro: true })
+          .eq("email", email);
+
+        if (error) {
+          console.error("Error updating user in Supabase:", error);
+        } else {
+          console.log(`✅ Successfully updated user ${email} to pro status`);
+        }
+      } catch (error) {
+        console.error("Unexpected error updating user in Supabase:", error);
+      }
+    } else {
+      console.error("No email found in checkout session.");
+    }
+  }
+
+  // Always respond with 200 status to acknowledge receipt
+  return NextResponse.json({ received: true }, { status: 200 });
 }
