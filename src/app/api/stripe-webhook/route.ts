@@ -2,14 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-export const config = {
-  api: {
-    bodyParser: false, // Disable Next.js body parsing to handle raw body
-  },
-};
+export const dynamic = "force-dynamic";
+export const preferredRegion = "home";
+export const runtime = "nodejs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
+  apiVersion: "2023-10-16",
 });
 
 const supabaseAdmin = createClient(
@@ -20,30 +18,20 @@ const supabaseAdmin = createClient(
   },
 );
 
-async function buffer(readable: ReadableStream<Uint8Array>) {
-  const chunks: Uint8Array[] = [];
-  const reader = readable.getReader();
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks);
-}
-
 export async function POST(req: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
   let event: Stripe.Event;
 
   try {
-    const rawBody = await buffer(req.body!);
+    const rawBody = await req.text();
     const signature = req.headers.get("stripe-signature")!;
 
     event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch (err) {
     console.error("⚠️ Webhook signature verification failed.", err);
-    // Return 200 to avoid repeated webhook attempts
-    return NextResponse.json({ received: true }, { status: 200 });
+    return new Response(`Webhook Error: ${(err as Error).message}`, {
+      status: 400,
+    });
   }
 
   if (event.type === "checkout.session.completed") {
@@ -71,5 +59,5 @@ export async function POST(req: NextRequest) {
   }
 
   // Always respond with 200 status to acknowledge receipt
-  return NextResponse.json({ received: true }, { status: 200 });
+  return new Response("Webhook received", { status: 200 });
 }
