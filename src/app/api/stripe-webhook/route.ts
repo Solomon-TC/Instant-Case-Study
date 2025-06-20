@@ -22,9 +22,9 @@ if (!process.env.SUPABASE_SERVICE_KEY) {
   throw new Error("Missing SUPABASE_SERVICE_KEY environment variable");
 }
 
-// Initialize Stripe with API version 2024-06-20
+// Initialize Stripe with API version 2025-05-28.basil
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-06-20",
+  apiVersion: "2025-05-28.basil",
 });
 
 // Initialize Supabase Admin client for database operations
