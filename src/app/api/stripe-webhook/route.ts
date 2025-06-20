@@ -88,26 +88,26 @@ export async function POST(request: NextRequest) {
     return new NextResponse("OK", { status: 200 });
   }
 
-  try {
-    // Helper function to update user in Supabase
-    async function updateUser(userId: string) {
-      const { error } = await supabaseAdmin
-        .from("users")
-        .update({
-          is_pro: true,
-          generation_count: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", userId);
+  // Helper function to update user in Supabase
+  async function updateUser(userId: string) {
+    const { error } = await supabaseAdmin
+      .from("users")
+      .update({
+        is_pro: true,
+        generation_count: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
 
-      if (error) {
-        console.error("❌ Error updating user is_pro status:", error);
-        throw error;
-      }
-
-      console.log(`✅ Successfully updated user ${userId} to pro status`);
+    if (error) {
+      console.error("❌ Error updating user is_pro status:", error);
+      throw error;
     }
 
+    console.log(`✅ Successfully updated user ${userId} to pro status`);
+  }
+
+  try {
     // Helper function to find user by email
     async function findUserByEmail(email: string): Promise<string | null> {
       const { data, error } = await supabaseAdmin
