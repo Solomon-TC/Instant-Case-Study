@@ -14,11 +14,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  createSupabaseClient,
-  type CaseStudy,
-  type User,
-} from "@/lib/supabase";
+import { supabaseBrowser } from "@/lib/supabase-browser";
+import type { CaseStudy, User } from "@/lib/supabase";
 import { FileDown, Copy, LogOut, Crown, AlertTriangle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import AuthForm from "@/components/auth-form";
@@ -55,7 +52,7 @@ export default function Page() {
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const supabase = createSupabaseClient();
+  const supabase = supabaseBrowser;
   const { toast } = useToast();
 
   const [formData, setFormData] = useState<FormData>({
@@ -85,22 +82,28 @@ export default function Page() {
       try {
         console.log("Initializing auth...");
 
-        // Get current user directly
+        // Get current session directly
         const {
-          data: { user },
+          data: { session },
           error,
-        } = await supabase.auth.getUser();
+        } = await supabase.auth.getSession();
 
-        console.log("Current user:", user?.email || "No user", "Error:", error);
+        console.log(
+          "Current session:",
+          session?.user?.email || "No user",
+          "Error:",
+          error,
+        );
 
         if (isMounted && !authInitialized) {
           authInitialized = true;
 
           if (error) {
-            console.error("Error getting user:", error);
+            console.error("Error getting session:", error);
             setUser(null);
             setUserProfile(null);
           } else {
+            const user = session?.user ?? null;
             setUser(user);
 
             if (user) {
@@ -132,7 +135,7 @@ export default function Page() {
         console.warn("Auth initialization timeout, setting loading to false");
         setIsLoading(false);
       }
-    }, 10000); // 10 second timeout
+    }, 5000); // 5 second timeout
 
     initializeAuth();
 
@@ -147,16 +150,17 @@ export default function Page() {
       );
 
       if (isMounted) {
-        setUser(session?.user ?? null);
+        const user = session?.user ?? null;
+        setUser(user);
 
-        if (session?.user) {
-          console.log(
-            "Auth change - fetching user profile for:",
-            session.user.id,
-          );
-          await fetchUserProfile(session.user.id);
+        if (user) {
+          console.log("Auth change - fetching user profile for:", user.id);
+          await fetchUserProfile(user.id);
         } else {
           setUserProfile(null);
+          setPreviousCaseStudies([]);
+          setGeneratedCaseStudy("");
+          setSocialMediaText("");
         }
       }
     });
@@ -213,12 +217,35 @@ export default function Page() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setUserProfile(null);
-    setPreviousCaseStudies([]);
-    setGeneratedCaseStudy("");
-    setSocialMediaText("");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Error signing out:", error);
+        toast({
+          title: "Error",
+          description: "Failed to sign out. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Clear local state
+      setUser(null);
+      setUserProfile(null);
+      setPreviousCaseStudies([]);
+      setGeneratedCaseStudy("");
+      setSocialMediaText("");
+
+      // Force page reload to ensure clean state
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Unexpected error during sign out:", error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleInputChange = (field: keyof FormData, value: string) => {
@@ -226,7 +253,10 @@ export default function Page() {
   };
 
   const fetchPreviousCaseStudies = async () => {
-    if (!user) return;
+    if (!user) {
+      setIsLoadingPrevious(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -256,6 +286,7 @@ export default function Page() {
   }, [user]);
 
   const generateCaseStudy = async () => {
+    // Ensure user is authenticated and profile is loaded
     if (!user || !userProfile) {
       toast({
         title: "Error",
@@ -298,8 +329,8 @@ export default function Page() {
       setGeneratedCaseStudy(data.caseStudy);
       setSocialMediaText(data.socialMediaText || "");
 
-      // Refresh user profile and case studies
-      if (data.saved) {
+      // Refresh user profile and case studies only if user is still authenticated
+      if (data.saved && user) {
         await fetchUserProfile(user.id);
         fetchPreviousCaseStudies();
       }
@@ -441,18 +472,18 @@ export default function Page() {
     return (
       <AuthForm
         onAuthSuccess={() => {
-          console.log("Auth success callback triggered, refreshing user...");
-          // Force a user refresh after successful auth
-          supabase.auth.getUser().then(({ data: { user }, error }) => {
+          console.log("Auth success callback triggered, refreshing session...");
+          // Force a session refresh after successful auth
+          supabase.auth.getSession().then(({ data: { session }, error }) => {
             console.log(
-              "Auth success - user refresh:",
-              user?.email || "No user",
+              "Auth success - session refresh:",
+              session?.user?.email || "No user",
               "Error:",
               error,
             );
-            if (user && !error) {
-              setUser(user);
-              fetchUserProfile(user.id);
+            if (session?.user && !error) {
+              setUser(session.user);
+              fetchUserProfile(session.user.id);
             }
           });
         }}

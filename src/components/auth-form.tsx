@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { createSupabaseClient } from "@/lib/supabase";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 import { Mail, Loader2, Eye, EyeOff } from "lucide-react";
 
 interface AuthFormProps {
@@ -21,7 +21,7 @@ export default function AuthForm({ onAuthSuccess }: AuthFormProps = {}) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const supabase = createSupabaseClient();
+  const supabase = supabaseBrowser;
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
