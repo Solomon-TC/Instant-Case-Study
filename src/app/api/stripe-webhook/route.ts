@@ -145,7 +145,9 @@ export async function POST(request: NextRequest) {
                 break;
               }
 
-              userId = await findUserByEmail(rawEmail);
+              const safeEmail: string | undefined =
+                rawEmail === null ? undefined : rawEmail;
+              userId = await findUserByEmail(safeEmail);
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
@@ -211,7 +213,9 @@ export async function POST(request: NextRequest) {
                   break;
                 }
 
-                userId = await findUserByEmail(rawEmail as string);
+                const safeEmail: string | undefined =
+                  rawEmail === null ? undefined : rawEmail;
+                userId = await findUserByEmail(safeEmail);
               }
             } catch (error) {
               console.error("Error retrieving customer from Stripe:", error);
@@ -270,7 +274,9 @@ export async function POST(request: NextRequest) {
                 break;
               }
 
-              userId = await findUserByEmail(rawEmail);
+              const safeEmail: string | undefined =
+                rawEmail === null ? undefined : rawEmail;
+              userId = await findUserByEmail(safeEmail);
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
