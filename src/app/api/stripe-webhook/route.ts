@@ -57,7 +57,7 @@ async function updateUser(userId: string) {
 
 // Helper function to find user by email
 async function findUserByEmail(
-  email: string | undefined,
+  email: string | null | undefined,
 ): Promise<string | null> {
   if (!email) return null;
 
@@ -142,11 +142,8 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
-              userId = await findUserByEmail(
-                ((customer as Stripe.Customer).email ?? undefined) as
-                  | string
-                  | undefined,
-              );
+              const email = (customer as Stripe.Customer).email;
+              userId = await findUserByEmail(email);
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
@@ -203,11 +200,8 @@ export async function POST(request: NextRequest) {
             try {
               const customer = await stripe.customers.retrieve(customerId);
               if (!customer.deleted) {
-                userId = await findUserByEmail(
-                  ((customer as Stripe.Customer).email ?? undefined) as
-                    | string
-                    | undefined,
-                );
+                const email = (customer as Stripe.Customer).email;
+                userId = await findUserByEmail(email);
               }
             } catch (error) {
               console.error("Error retrieving customer from Stripe:", error);
@@ -257,11 +251,8 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
-              userId = await findUserByEmail(
-                ((customer as Stripe.Customer).email ?? undefined) as
-                  | string
-                  | undefined,
-              );
+              const email = (customer as Stripe.Customer).email;
+              userId = await findUserByEmail(email);
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
