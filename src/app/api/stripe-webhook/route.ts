@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
                   break;
                 }
 
-                userId = await findUserByEmail(rawEmail);
+                userId = await findUserByEmail(rawEmail as string);
               }
             } catch (error) {
               console.error("Error retrieving customer from Stripe:", error);
