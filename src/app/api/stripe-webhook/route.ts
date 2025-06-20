@@ -57,7 +57,7 @@ async function updateUser(userId: string) {
 
 // Helper function to find user by email
 async function findUserByEmail(
-  email: string | null | undefined,
+  email: string | undefined,
 ): Promise<string | null> {
   if (!email) return null;
 
