@@ -1,42 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
+// Validate required environment variables at module level
+const requiredEnvVars = {
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+  STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID,
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
+    process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+};
+
+// Check for missing environment variables
+const missingVars = Object.entries(requiredEnvVars)
+  .filter(([key, value]) => !value)
+  .map(([key]) => key);
+
+if (missingVars.length > 0) {
+  throw new Error(
+    `Missing required environment variables: ${missingVars.join(", ")}`,
+  );
+}
+
+// Initialize Stripe with stable API version
+const stripe = new Stripe(requiredEnvVars.STRIPE_SECRET_KEY!, {
+  apiVersion: "2023-08-16", // Use stable API version
+});
+
 export async function POST(request: NextRequest) {
   try {
-    // Validate environment variables
-    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-    const stripePriceId = process.env.STRIPE_PRICE_ID;
-    const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-
-    if (!stripeSecretKey || !stripePriceId || !stripePublishableKey) {
-      console.error("Missing Stripe environment variables:", {
-        hasSecretKey: !!stripeSecretKey,
-        hasPriceId: !!stripePriceId,
-        hasPublishableKey: !!stripePublishableKey,
-      });
-      return NextResponse.json(
-        { error: "Stripe environment variables are not properly configured" },
-        { status: 500 },
-      );
-    }
-
-    const stripe = new Stripe(stripeSecretKey);
-
     const body = await request.json();
-    const { email, promoCode } = body;
+    const { email, promoCode, userId } = body;
 
     if (!email) {
+      console.error("❌ Email is required for checkout session");
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
     // Get the origin for success/cancel URLs
     const origin = request.headers.get("origin") || request.nextUrl.origin;
+    console.log(
+      `🛒 Creating checkout session for ${email} with origin: ${origin}`,
+    );
 
     let discounts = undefined;
 
     // Handle promo code validation if provided
     if (promoCode && promoCode.trim()) {
       try {
+        console.log(`🏷️ Validating promo code: ${promoCode}`);
+
         // Search for active promotion code matching the provided code
         const promoCodes = await stripe.promotionCodes.list({
           code: promoCode.trim(),
@@ -46,16 +57,18 @@ export async function POST(request: NextRequest) {
 
         if (promoCodes.data.length > 0) {
           discounts = [{ promotion_code: promoCodes.data[0].id }];
-          console.log("Valid promo code found:", promoCode);
+          console.log(`✅ Valid promo code found: ${promoCode}`);
         } else {
-          console.log("Invalid or inactive promo code:", promoCode);
+          console.log(`❌ Invalid or inactive promo code: ${promoCode}`);
           return NextResponse.json(
             { error: "Invalid or expired promo code" },
             { status: 400 },
           );
         }
       } catch (promoError) {
-        console.error("Error validating promo code:", promoError);
+        const errorMessage =
+          promoError instanceof Error ? promoError.message : "Unknown error";
+        console.error("❌ Error validating promo code:", errorMessage);
         return NextResponse.json(
           { error: "Failed to validate promo code" },
           { status: 400 },
@@ -63,12 +76,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Prepare session metadata
+    const metadata: Record<string, string> = {
+      email: email,
+    };
+
+    if (userId) {
+      metadata.user_id = userId;
+    }
+
     // Create checkout session
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       line_items: [
         {
-          price: stripePriceId,
+          price: requiredEnvVars.STRIPE_PRICE_ID!,
           quantity: 1,
         },
       ],
@@ -78,13 +100,34 @@ export async function POST(request: NextRequest) {
       automatic_tax: {
         enabled: true,
       },
-      ...(discounts && { discounts }),
-    });
+      metadata: metadata,
+      allow_promotion_codes: !promoCode, // Allow promotion codes if none provided
+      billing_address_collection: "auto",
+      payment_method_types: ["card"],
+      subscription_data: {
+        metadata: metadata,
+      },
+    };
 
-    console.log("Checkout session created successfully:", session.id);
-    return NextResponse.json({ sessionId: session.id });
+    // Add discounts if promo code was validated
+    if (discounts) {
+      sessionParams.discounts = discounts;
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
+
+    console.log(`✅ Checkout session created successfully: ${session.id}`);
+    return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
-    console.error("Error creating checkout session:", error);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("❌ Error creating checkout session:", errorMessage);
+
+    // Log additional error details for debugging
+    if (error instanceof Error && error.stack) {
+      console.error("Stack trace:", error.stack);
+    }
+
     return NextResponse.json(
       { error: "Failed to create checkout session" },
       { status: 500 },

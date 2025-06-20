@@ -21,17 +21,27 @@ interface UpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
   userEmail: string;
+  userId?: string;
 }
 
-// Initialize Stripe
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!,
-);
+// Validate and initialize Stripe
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
+if (!stripePublishableKey) {
+  console.error(
+    "Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable",
+  );
+}
+
+const stripePromise = stripePublishableKey
+  ? loadStripe(stripePublishableKey)
+  : null;
 
 export default function UpgradeModal({
   isOpen,
   onClose,
   userEmail,
+  userId,
 }: UpgradeModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [promoCode, setPromoCode] = useState("");
@@ -50,6 +60,7 @@ export default function UpgradeModal({
         body: JSON.stringify({
           email: userEmail,
           promoCode: promoCode.trim() || undefined,
+          userId: userId,
         }),
       });
 
@@ -66,6 +77,12 @@ export default function UpgradeModal({
       }
 
       // Load Stripe and redirect to checkout
+      if (!stripePromise) {
+        throw new Error(
+          "Stripe is not properly configured. Missing publishable key.",
+        );
+      }
+
       const stripe = await stripePromise;
       if (!stripe) {
         throw new Error("Stripe.js failed to load");

@@ -79,6 +79,7 @@ export default function Page() {
   // Auth and user profile management
   useEffect(() => {
     let isMounted = true;
+    let authInitialized = false;
 
     const initializeAuth = async () => {
       try {
@@ -92,7 +93,9 @@ export default function Page() {
 
         console.log("Current user:", user?.email || "No user", "Error:", error);
 
-        if (isMounted) {
+        if (isMounted && !authInitialized) {
+          authInitialized = true;
+
           if (error) {
             console.error("Error getting user:", error);
             setUser(null);
@@ -110,19 +113,26 @@ export default function Page() {
           }
 
           console.log("Setting loading to false");
+          setIsLoading(false);
         }
       } catch (error) {
         console.error("Error in initializeAuth:", error);
-        if (isMounted) {
+        if (isMounted && !authInitialized) {
+          authInitialized = true;
           setUser(null);
           setUserProfile(null);
-        }
-      } finally {
-        if (isMounted) {
           setIsLoading(false);
         }
       }
     };
+
+    // Set a timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (isMounted && !authInitialized) {
+        console.warn("Auth initialization timeout, setting loading to false");
+        setIsLoading(false);
+      }
+    }, 10000); // 10 second timeout
 
     initializeAuth();
 
@@ -153,6 +163,7 @@ export default function Page() {
 
     return () => {
       isMounted = false;
+      clearTimeout(loadingTimeout);
       subscription.unsubscribe();
     };
   }, []);
@@ -833,6 +844,7 @@ export default function Page() {
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         userEmail={user?.email || ""}
+        userId={user?.id}
       />
     </div>
   );
