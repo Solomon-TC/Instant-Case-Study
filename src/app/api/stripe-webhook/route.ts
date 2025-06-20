@@ -56,7 +56,11 @@ async function updateUser(userId: string) {
 }
 
 // Helper function to find user by email
-async function findUserByEmail(email: string): Promise<string | null> {
+async function findUserByEmail(
+  email: string | null | undefined,
+): Promise<string | null> {
+  if (!email) return null;
+
   const { data, error } = await supabaseAdmin
     .from("users")
     .select("id")
