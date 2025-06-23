@@ -117,14 +117,16 @@ export default function Page() {
         if (profileError) {
           // If user doesn't exist in users table, create one
           if (profileError.code === "PGRST116") {
+            const newUserData = {
+              id: session.user.id,
+              email: session.user.email || "",
+              is_pro: false,
+              generation_count: 0,
+            };
+
             const { data: newUser, error: createError } = await supabase
               .from("users")
-              .insert({
-                id: session.user.id,
-                email: session.user.email || "",
-                is_pro: false,
-                generation_count: 0,
-              })
+              .insert(newUserData)
               .select()
               .single();
 
@@ -133,13 +135,15 @@ export default function Page() {
               throw new Error("Failed to create user profile");
             }
 
-            setUserProfile(newUser);
+            if (newUser) {
+              setUserProfile(newUser as User);
+            }
           } else {
             console.error("Profile fetch error:", profileError);
             throw new Error("Failed to fetch user profile");
           }
-        } else {
-          setUserProfile(profile);
+        } else if (profile) {
+          setUserProfile(profile as User);
         }
 
         // Fetch case studies
@@ -213,14 +217,16 @@ export default function Page() {
         if (error.code === "PGRST116") {
           console.log("User profile not found, creating new profile...");
           const { data: authUser } = await supabase.auth.getUser();
+          const newUserData = {
+            id: userId,
+            email: authUser.user?.email || "",
+            is_pro: false,
+            generation_count: 0,
+          };
+
           const { data: newUser, error: createError } = await supabase
             .from("users")
-            .insert({
-              id: userId,
-              email: authUser.user?.email || "",
-              is_pro: false,
-              generation_count: 0,
-            })
+            .insert(newUserData)
             .select()
             .single();
 
@@ -230,13 +236,17 @@ export default function Page() {
           }
 
           console.log("New user profile created:", newUser);
-          setUserProfile(newUser);
+          if (newUser) {
+            setUserProfile(newUser as User);
+          }
         }
         return;
       }
 
       console.log("User profile fetched successfully:", data);
-      setUserProfile(data);
+      if (data) {
+        setUserProfile(data as User);
+      }
     } catch (error) {
       console.error("Error in fetchUserProfile:", error);
     }

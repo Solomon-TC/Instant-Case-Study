@@ -68,19 +68,29 @@ function getSupabaseClient() {
   return supabaseAdmin;
 }
 
+// Type definitions for user data
+type UserUpdateData = {
+  is_pro: boolean;
+  generation_count: number | null;
+  updated_at: string;
+};
+
 // Helper function to update user in Supabase
 async function updateUser(userId: string | null) {
   if (!userId) {
     throw new Error("Cannot update user: userId is null or undefined");
   }
   const supabase = getSupabaseClient();
+
+  const updateData: UserUpdateData = {
+    is_pro: true,
+    generation_count: null,
+    updated_at: new Date().toISOString(),
+  };
+
   const { error } = await supabase
     .from("users")
-    .update({
-      is_pro: true,
-      generation_count: null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq("id", userId);
 
   if (error) {
@@ -89,6 +99,16 @@ async function updateUser(userId: string | null) {
   }
 
   console.log(`✅ Successfully updated user ${userId} to pro status`);
+}
+
+// Type definition for user lookup
+type UserLookupData = {
+  id: string;
+};
+
+// Type guard for user lookup data
+function isValidUserLookupData(data: any): data is UserLookupData {
+  return data && typeof data.id === "string";
 }
 
 // Helper function to find user by email
@@ -112,7 +132,12 @@ async function findUserByEmail(
     return null;
   }
 
-  return data?.id ?? null;
+  if (!data || !isValidUserLookupData(data)) {
+    console.error("Invalid user lookup data:", data);
+    return null;
+  }
+
+  return data.id;
 }
 
 // Type guard to check if email is a valid string

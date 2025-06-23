@@ -3,6 +3,25 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/supabase";
+
+// Type definitions for API data
+type UserData = {
+  id: string;
+  is_pro: boolean | null;
+  generation_count: number | null;
+};
+
+// Type guard to validate user data
+function isValidUserData(data: any): data is UserData {
+  return (
+    data &&
+    typeof data.id === "string" &&
+    (typeof data.is_pro === "boolean" || data.is_pro === null) &&
+    (typeof data.generation_count === "number" ||
+      data.generation_count === null)
+  );
+}
 
 // Helper function to validate and get environment variables at runtime
 function getRequiredEnvVars(): {
@@ -34,7 +53,7 @@ function getRequiredEnvVars(): {
 
 // Initialize clients lazily to avoid build-time errors
 let openai: OpenAI | null = null;
-let supabase: ReturnType<typeof createClient> | null = null;
+let supabase: ReturnType<typeof createClient<Database>> | null = null;
 
 function getOpenAIClient(): OpenAI {
   if (!openai) {
@@ -49,7 +68,7 @@ function getOpenAIClient(): OpenAI {
 function getSupabaseClient() {
   if (!supabase) {
     const { supabaseUrl, supabaseServiceRoleKey } = getRequiredEnvVars();
-    supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+    supabase = createClient<Database>(supabaseUrl, supabaseServiceRoleKey);
   }
   return supabase;
 }
@@ -89,9 +108,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check user's pro status and generation count
-    const { data: user, error: userError } = await supabaseClient
+    const { data: userData, error: userError } = await supabaseClient
       .from("users")
-      .select("is_pro, generation_count")
+      .select("id, is_pro, generation_count")
       .eq("id", userId)
       .single();
 
@@ -100,8 +119,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check if user has reached generation limit
-    if (!user.is_pro && user.generation_count >= 3) {
+    // Validate and type-check user data
+    if (!userData || !isValidUserData(userData)) {
+      console.error("Invalid user data structure:", userData);
+      return NextResponse.json({ error: "Invalid user data" }, { status: 500 });
+    }
+
+    const user = userData as UserData;
+
+    // Check if user has reached generation limit (handle null values)
+    const isPro = user.is_pro ?? false;
+    const generationCount = user.generation_count ?? 0;
+
+    if (!isPro && generationCount >= 3) {
       return NextResponse.json(
         { error: "Generation limit reached. Please upgrade to Pro." },
         { status: 403 },
@@ -191,7 +221,7 @@ ${generatedCaseStudy}`;
       .single();
 
     // Increment user's generation count if not pro
-    if (!user.is_pro) {
+    if (!isPro) {
       const { error: incrementError } = await supabaseClient.rpc(
         "increment_generation_count",
         { user_id: userId },
