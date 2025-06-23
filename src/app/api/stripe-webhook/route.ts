@@ -138,9 +138,11 @@ export async function POST(request: NextRequest) {
             if (!customer.deleted) {
               const possibleEmail = (customer as Stripe.Customer).email;
 
-              if (typeof possibleEmail === "string") {
-                const email: string = possibleEmail;
-                userId = await findUserByEmail(email);
+              if (
+                typeof possibleEmail === "string" &&
+                possibleEmail.trim() !== ""
+              ) {
+                userId = await findUserByEmail(possibleEmail as string);
               } else {
                 console.error("Stripe customer has no valid email.");
                 break;
@@ -203,9 +205,11 @@ export async function POST(request: NextRequest) {
               if (!customer.deleted) {
                 const possibleEmail = (customer as Stripe.Customer).email;
 
-                if (typeof possibleEmail === "string") {
-                  const email: string = possibleEmail;
-                  userId = await findUserByEmail(email);
+                if (
+                  typeof possibleEmail === "string" &&
+                  possibleEmail.trim() !== ""
+                ) {
+                  userId = await findUserByEmail(possibleEmail as string);
                 } else {
                   console.error("Stripe customer has no valid email.");
                   break;
@@ -261,9 +265,11 @@ export async function POST(request: NextRequest) {
             if (!customer.deleted) {
               const possibleEmail = (customer as Stripe.Customer).email;
 
-              if (typeof possibleEmail === "string") {
-                const email: string = possibleEmail;
-                userId = await findUserByEmail(email);
+              if (
+                typeof possibleEmail === "string" &&
+                possibleEmail.trim() !== ""
+              ) {
+                userId = await findUserByEmail(possibleEmail as string);
               } else {
                 console.error("Stripe customer has no valid email.");
                 break;
