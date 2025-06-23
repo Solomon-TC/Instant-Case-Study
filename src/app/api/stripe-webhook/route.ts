@@ -56,8 +56,10 @@ async function updateUser(userId: string) {
 }
 
 // Helper function to find user by email
-async function findUserByEmail(email: string | null): Promise<string | null> {
-  // Return null if email is null or empty string
+async function findUserByEmail(
+  email: string | null | undefined,
+): Promise<string | null> {
+  // Return null if email is null, undefined, or empty string
   if (!email || email.trim() === "") {
     return null;
   }
@@ -74,6 +76,26 @@ async function findUserByEmail(email: string | null): Promise<string | null> {
   }
 
   return data?.id ?? null;
+}
+
+// Type guard to check if email is a valid string
+function isValidEmail(email: string | null | undefined): email is string {
+  return typeof email === "string" && email.trim().length > 0;
+}
+
+// Helper function to safely get user ID from customer email
+async function getUserIdFromCustomer(
+  customerId: string,
+): Promise<string | null> {
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    if (!customer.deleted && isValidEmail(customer.email)) {
+      return await findUserByEmail(customer.email);
+    }
+  } catch (error) {
+    console.error("Error retrieving customer from Stripe:", error);
+  }
+  return null;
 }
 
 /**
@@ -138,15 +160,7 @@ export async function POST(request: NextRequest) {
 
         // If no user_id in metadata, try to find user by customer email
         if (!userId && customerId) {
-          try {
-            const customer = await stripe.customers.retrieve(customerId);
-            if (!customer.deleted && customer.email) {
-              const customerEmail: string = customer.email;
-              userId = await findUserByEmail(customerEmail);
-            }
-          } catch (error) {
-            console.error("Error retrieving customer from Stripe:", error);
-          }
+          userId = await getUserIdFromCustomer(customerId);
         }
 
         if (!userId) {
@@ -196,15 +210,7 @@ export async function POST(request: NextRequest) {
 
           // If no user_id in subscription metadata, try to find user by customer email
           if (!userId && customerId) {
-            try {
-              const customer = await stripe.customers.retrieve(customerId);
-              if (!customer.deleted && customer.email) {
-                const customerEmail: string = customer.email;
-                userId = await findUserByEmail(customerEmail);
-              }
-            } catch (error) {
-              console.error("Error retrieving customer from Stripe:", error);
-            }
+            userId = await getUserIdFromCustomer(customerId);
           }
 
           if (!userId) {
@@ -247,15 +253,7 @@ export async function POST(request: NextRequest) {
 
         // If no user_id in metadata, try to find user by customer email
         if (!userId && customerId) {
-          try {
-            const customer = await stripe.customers.retrieve(customerId);
-            if (!customer.deleted && customer.email) {
-              const customerEmail: string = customer.email;
-              userId = await findUserByEmail(customerEmail);
-            }
-          } catch (error) {
-            console.error("Error retrieving customer from Stripe:", error);
-          }
+          userId = await getUserIdFromCustomer(customerId);
         }
 
         if (!userId) {
