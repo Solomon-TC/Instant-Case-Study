@@ -86,6 +86,50 @@ function isValidEmail(email: string | null | undefined): email is string {
   return typeof email === "string" && email.trim().length > 0;
 }
 
+// Helper function to safely extract subscription ID from invoice
+function getSubscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
+  // Use type assertion to access subscription property safely
+  const invoiceWithSubscription = invoice as Stripe.Invoice & {
+    subscription?: string | Stripe.Subscription | null;
+  };
+
+  if (!invoiceWithSubscription.subscription) {
+    return null;
+  }
+
+  if (typeof invoiceWithSubscription.subscription === "string") {
+    return invoiceWithSubscription.subscription;
+  }
+
+  if (
+    typeof invoiceWithSubscription.subscription === "object" &&
+    invoiceWithSubscription.subscription?.id
+  ) {
+    return invoiceWithSubscription.subscription.id;
+  }
+
+  return null;
+}
+
+// Helper function to safely extract customer ID from any Stripe object
+function getCustomerIdFromStripeObject(obj: {
+  customer?: string | Stripe.Customer | null;
+}): string | null {
+  if (!obj.customer) {
+    return null;
+  }
+
+  if (typeof obj.customer === "string") {
+    return obj.customer;
+  }
+
+  if (typeof obj.customer === "object" && obj.customer?.id) {
+    return obj.customer.id;
+  }
+
+  return null;
+}
+
 // Helper function to safely get user ID from customer email
 async function getUserIdFromCustomer(
   customerId: string,
@@ -157,13 +201,8 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        // Safely extract customer ID - it can be string, Stripe.Customer object, or null
-        const customerId =
-          typeof session.customer === "string"
-            ? session.customer
-            : typeof session.customer === "object" && session.customer?.id
-              ? session.customer.id
-              : null;
+        // Safely extract customer ID using helper function
+        const customerId = getCustomerIdFromStripeObject(session);
         let userId: string | null =
           session.metadata?.supabase_user_id ||
           session.metadata?.user_id ||
@@ -191,21 +230,10 @@ export async function POST(request: NextRequest) {
 
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
-        // Safely extract subscription ID - it can be string, Stripe.Subscription object, or null
-        const subscriptionId =
-          typeof invoice.subscription === "string"
-            ? invoice.subscription
-            : typeof invoice.subscription === "object" &&
-                invoice.subscription?.id
-              ? invoice.subscription.id
-              : null;
-        // Safely extract customer ID - it can be string, Stripe.Customer object, or null
-        const customerId =
-          typeof invoice.customer === "string"
-            ? invoice.customer
-            : typeof invoice.customer === "object" && invoice.customer?.id
-              ? invoice.customer.id
-              : null;
+        // Safely extract subscription ID using helper function
+        const subscriptionId = getSubscriptionIdFromInvoice(invoice);
+        // Safely extract customer ID using helper function
+        const customerId = getCustomerIdFromStripeObject(invoice);
 
         if (!subscriptionId) {
           console.error("❌ No subscription ID in invoice.paid event");
@@ -259,14 +287,8 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated":
       case "customer.subscription.created": {
         const subscription = event.data.object as Stripe.Subscription;
-        // Safely extract customer ID - it can be string, Stripe.Customer object, or null
-        const customerId =
-          typeof subscription.customer === "string"
-            ? subscription.customer
-            : typeof subscription.customer === "object" &&
-                subscription.customer?.id
-              ? subscription.customer.id
-              : null;
+        // Safely extract customer ID using helper function
+        const customerId = getCustomerIdFromStripeObject(subscription);
 
         // Only process if subscription is active or trialing
         if (
