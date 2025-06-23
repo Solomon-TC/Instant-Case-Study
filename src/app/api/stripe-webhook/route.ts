@@ -202,16 +202,18 @@ export async function POST(request: NextRequest) {
             try {
               const customer = await stripe.customers.retrieve(customerId);
               if (!customer.deleted) {
-                const possibleEmail = (customer as Stripe.Customer).email;
-                if (
-                  typeof possibleEmail === "string" &&
-                  possibleEmail.trim() !== ""
-                ) {
-                  userId = await findUserByEmail(possibleEmail as string);
-                } else {
+                const rawEmail = (customer as Stripe.Customer).email;
+                const email: string | undefined =
+                  typeof rawEmail === "string" && rawEmail.trim() !== ""
+                    ? rawEmail
+                    : undefined;
+
+                if (!email) {
                   console.error("Stripe customer has no valid email.");
                   break;
                 }
+
+                userId = await findUserByEmail(email);
               }
             } catch (error) {
               console.error("Error retrieving customer from Stripe:", error);
