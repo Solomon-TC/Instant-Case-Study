@@ -113,7 +113,7 @@ function getSubscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
 
 // Helper function to safely extract customer ID from any Stripe object
 function getCustomerIdFromStripeObject(obj: {
-  customer?: string | Stripe.Customer | null;
+  customer?: string | Stripe.Customer | Stripe.DeletedCustomer | null;
 }): string | null {
   if (!obj.customer) {
     return null;
@@ -123,7 +123,14 @@ function getCustomerIdFromStripeObject(obj: {
     return obj.customer;
   }
 
+  // Check if customer is an object and has an id property
   if (typeof obj.customer === "object" && obj.customer?.id) {
+    // Additional check to ensure it's not a DeletedCustomer
+    // DeletedCustomer has 'deleted: true' property, while Customer doesn't
+    if ("deleted" in obj.customer && obj.customer.deleted === true) {
+      // This is a DeletedCustomer, return null
+      return null;
+    }
     return obj.customer.id;
   }
 
