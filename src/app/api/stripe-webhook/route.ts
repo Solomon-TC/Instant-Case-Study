@@ -37,7 +37,10 @@ const supabaseAdmin = createClient<Database>(
 );
 
 // Helper function to update user in Supabase
-async function updateUser(userId: string) {
+async function updateUser(userId: string | null) {
+  if (!userId) {
+    throw new Error("Cannot update user: userId is null or undefined");
+  }
   const { error } = await supabaseAdmin
     .from("users")
     .update({
@@ -155,8 +158,10 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const customerId = session.customer as string | undefined;
-        let userId =
-          session.metadata?.supabase_user_id || session.metadata?.user_id;
+        let userId: string | null =
+          session.metadata?.supabase_user_id ||
+          session.metadata?.user_id ||
+          null;
 
         // If no user_id in metadata, try to find user by customer email
         if (!userId && customerId) {
@@ -204,9 +209,10 @@ export async function POST(request: NextRequest) {
             break;
           }
 
-          let userId =
+          let userId: string | null =
             subscription.metadata?.supabase_user_id ||
-            subscription.metadata?.user_id;
+            subscription.metadata?.user_id ||
+            null;
 
           // If no user_id in subscription metadata, try to find user by customer email
           if (!userId && customerId) {
@@ -247,9 +253,10 @@ export async function POST(request: NextRequest) {
           break;
         }
 
-        let userId =
+        let userId: string | null =
           subscription.metadata?.supabase_user_id ||
-          subscription.metadata?.user_id;
+          subscription.metadata?.user_id ||
+          null;
 
         // If no user_id in metadata, try to find user by customer email
         if (!userId && customerId) {
