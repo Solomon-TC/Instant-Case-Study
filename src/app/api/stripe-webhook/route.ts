@@ -136,10 +136,11 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
-              const rawEmail = (customer as Stripe.Customer).email;
+              const possibleEmail = (customer as Stripe.Customer).email;
 
-              if (typeof rawEmail === "string") {
-                userId = await findUserByEmail(rawEmail);
+              if (typeof possibleEmail === "string") {
+                const email: string = possibleEmail;
+                userId = await findUserByEmail(email);
               } else {
                 console.error("Stripe customer has no valid email.");
                 break;
@@ -200,10 +201,11 @@ export async function POST(request: NextRequest) {
             try {
               const customer = await stripe.customers.retrieve(customerId);
               if (!customer.deleted) {
-                const rawEmail = (customer as Stripe.Customer).email;
+                const possibleEmail = (customer as Stripe.Customer).email;
 
-                if (typeof rawEmail === "string") {
-                  userId = await findUserByEmail(rawEmail);
+                if (typeof possibleEmail === "string") {
+                  const email: string = possibleEmail;
+                  userId = await findUserByEmail(email);
                 } else {
                   console.error("Stripe customer has no valid email.");
                   break;
@@ -257,10 +259,11 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
-              const rawEmail = (customer as Stripe.Customer).email;
+              const possibleEmail = (customer as Stripe.Customer).email;
 
-              if (typeof rawEmail === "string") {
-                userId = await findUserByEmail(rawEmail);
+              if (typeof possibleEmail === "string") {
+                const email: string = possibleEmail;
+                userId = await findUserByEmail(email);
               } else {
                 console.error("Stripe customer has no valid email.");
                 break;
