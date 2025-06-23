@@ -138,16 +138,12 @@ export async function POST(request: NextRequest) {
             if (!customer.deleted) {
               const rawEmail = (customer as Stripe.Customer).email;
 
-              if (!rawEmail || typeof rawEmail !== "string") {
-                console.error(
-                  "Missing or invalid email from Stripe customer object",
-                );
+              if (typeof rawEmail === "string") {
+                userId = await findUserByEmail(rawEmail);
+              } else {
+                console.error("Stripe customer has no valid email.");
                 break;
               }
-
-              const safeEmail: string | undefined =
-                rawEmail === null ? undefined : rawEmail;
-              userId = await findUserByEmail(safeEmail);
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
@@ -206,16 +202,12 @@ export async function POST(request: NextRequest) {
               if (!customer.deleted) {
                 const rawEmail = (customer as Stripe.Customer).email;
 
-                if (!rawEmail || typeof rawEmail !== "string") {
-                  console.error(
-                    "Missing or invalid email from Stripe customer object",
-                  );
+                if (typeof rawEmail === "string") {
+                  userId = await findUserByEmail(rawEmail);
+                } else {
+                  console.error("Stripe customer has no valid email.");
                   break;
                 }
-
-                const safeEmail: string | undefined =
-                  rawEmail === null ? undefined : rawEmail;
-                userId = await findUserByEmail(safeEmail);
               }
             } catch (error) {
               console.error("Error retrieving customer from Stripe:", error);
@@ -267,16 +259,12 @@ export async function POST(request: NextRequest) {
             if (!customer.deleted) {
               const rawEmail = (customer as Stripe.Customer).email;
 
-              if (!rawEmail || typeof rawEmail !== "string") {
-                console.error(
-                  "Missing or invalid email from Stripe customer object",
-                );
+              if (typeof rawEmail === "string") {
+                userId = await findUserByEmail(rawEmail);
+              } else {
+                console.error("Stripe customer has no valid email.");
                 break;
               }
-
-              const safeEmail: string | undefined =
-                rawEmail === null ? undefined : rawEmail;
-              userId = await findUserByEmail(safeEmail);
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
