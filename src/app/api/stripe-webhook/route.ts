@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
         if (!userId && customerId) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
-            if (!customer.deleted) {
+            if (!customer.deleted && customer.email) {
               userId = await findUserByEmail(customer.email);
             }
           } catch (error) {
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
           if (!userId && customerId) {
             try {
               const customer = await stripe.customers.retrieve(customerId);
-              if (!customer.deleted) {
+              if (!customer.deleted && customer.email) {
                 userId = await findUserByEmail(customer.email);
               }
             } catch (error) {
@@ -247,7 +247,7 @@ export async function POST(request: NextRequest) {
         if (!userId && customerId) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
-            if (!customer.deleted) {
+            if (!customer.deleted && customer.email) {
               userId = await findUserByEmail(customer.email);
             }
           } catch (error) {
