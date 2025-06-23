@@ -157,7 +157,13 @@ export async function POST(request: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        const customerId = session.customer as string | undefined;
+        // Safely extract customer ID - it can be string, Stripe.Customer object, or null
+        const customerId =
+          typeof session.customer === "string"
+            ? session.customer
+            : typeof session.customer === "object" && session.customer?.id
+              ? session.customer.id
+              : null;
         let userId: string | null =
           session.metadata?.supabase_user_id ||
           session.metadata?.user_id ||
@@ -185,8 +191,21 @@ export async function POST(request: NextRequest) {
 
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = invoice.subscription as string | null;
-        const customerId = invoice.customer as string | undefined;
+        // Safely extract subscription ID - it can be string, Stripe.Subscription object, or null
+        const subscriptionId =
+          typeof invoice.subscription === "string"
+            ? invoice.subscription
+            : typeof invoice.subscription === "object" &&
+                invoice.subscription?.id
+              ? invoice.subscription.id
+              : null;
+        // Safely extract customer ID - it can be string, Stripe.Customer object, or null
+        const customerId =
+          typeof invoice.customer === "string"
+            ? invoice.customer
+            : typeof invoice.customer === "object" && invoice.customer?.id
+              ? invoice.customer.id
+              : null;
 
         if (!subscriptionId) {
           console.error("❌ No subscription ID in invoice.paid event");
@@ -240,7 +259,14 @@ export async function POST(request: NextRequest) {
       case "customer.subscription.updated":
       case "customer.subscription.created": {
         const subscription = event.data.object as Stripe.Subscription;
-        const customerId = subscription.customer as string;
+        // Safely extract customer ID - it can be string, Stripe.Customer object, or null
+        const customerId =
+          typeof subscription.customer === "string"
+            ? subscription.customer
+            : typeof subscription.customer === "object" &&
+                subscription.customer?.id
+              ? subscription.customer.id
+              : null;
 
         // Only process if subscription is active or trialing
         if (
