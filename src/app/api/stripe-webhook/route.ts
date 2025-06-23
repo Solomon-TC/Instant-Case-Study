@@ -275,8 +275,10 @@ export async function POST(request: NextRequest) {
         // Safely extract customer ID using helper function
         const customerId = getCustomerIdFromStripeObject(session);
         let userId: string | null =
+          session.metadata?.userId ||
           session.metadata?.supabase_user_id ||
           session.metadata?.user_id ||
+          session.client_reference_id ||
           null;
 
         // If no user_id in metadata, try to find user by customer email
@@ -291,8 +293,11 @@ export async function POST(request: NextRequest) {
             "Metadata:",
             session.metadata,
           );
-          // Don't throw error, just log and continue
-          break;
+          // Return error status to indicate webhook processing failed
+          return new NextResponse(
+            JSON.stringify({ error: "User ID not found for checkout session" }),
+            { status: 400 },
+          );
         }
 
         await updateUser(userId);
@@ -329,6 +334,7 @@ export async function POST(request: NextRequest) {
           }
 
           let userId: string | null =
+            subscription.metadata?.userId ||
             subscription.metadata?.supabase_user_id ||
             subscription.metadata?.user_id ||
             null;
@@ -345,7 +351,11 @@ export async function POST(request: NextRequest) {
               "Subscription:",
               subscriptionId,
             );
-            break;
+            // Return error status to indicate webhook processing failed
+            return new NextResponse(
+              JSON.stringify({ error: "User ID not found for invoice.paid" }),
+              { status: 400 },
+            );
           }
 
           await updateUser(userId);
@@ -374,6 +384,7 @@ export async function POST(request: NextRequest) {
         }
 
         let userId: string | null =
+          subscription.metadata?.userId ||
           subscription.metadata?.supabase_user_id ||
           subscription.metadata?.user_id ||
           null;
@@ -390,7 +401,11 @@ export async function POST(request: NextRequest) {
             "Subscription metadata:",
             subscription.metadata,
           );
-          break;
+          // Return error status to indicate webhook processing failed
+          return new NextResponse(
+            JSON.stringify({ error: `User ID not found for ${event.type}` }),
+            { status: 400 },
+          );
         }
 
         await updateUser(userId);
