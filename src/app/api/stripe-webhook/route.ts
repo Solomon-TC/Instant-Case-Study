@@ -137,7 +137,6 @@ export async function POST(request: NextRequest) {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
               const possibleEmail = (customer as Stripe.Customer).email;
-
               if (
                 typeof possibleEmail === "string" &&
                 possibleEmail.trim() !== ""
@@ -204,7 +203,6 @@ export async function POST(request: NextRequest) {
               const customer = await stripe.customers.retrieve(customerId);
               if (!customer.deleted) {
                 const possibleEmail = (customer as Stripe.Customer).email;
-
                 if (
                   typeof possibleEmail === "string" &&
                   possibleEmail.trim() !== ""
@@ -264,7 +262,6 @@ export async function POST(request: NextRequest) {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
               const possibleEmail = (customer as Stripe.Customer).email;
-
               if (
                 typeof possibleEmail === "string" &&
                 possibleEmail.trim() !== ""
