@@ -8,40 +8,67 @@ export const dynamic = "force-dynamic";
 export const preferredRegion = "home";
 export const runtime = "nodejs";
 
-// Validate required environment variables
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("Missing STRIPE_SECRET_KEY environment variable");
-}
-if (!process.env.STRIPE_WEBHOOK_SECRET) {
-  throw new Error("Missing STRIPE_WEBHOOK_SECRET environment variable");
-}
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL environment variable");
-}
-if (!process.env.SUPABASE_SERVICE_KEY) {
-  throw new Error("Missing SUPABASE_SERVICE_KEY environment variable");
+// Helper function to validate and get environment variables at runtime
+function getRequiredEnvVars() {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  // Use SUPABASE_SERVICE_ROLE_KEY to match other API routes
+  const supabaseServiceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+  const missing = [];
+  if (!stripeSecretKey) missing.push("STRIPE_SECRET_KEY");
+  if (!stripeWebhookSecret) missing.push("STRIPE_WEBHOOK_SECRET");
+  if (!supabaseUrl) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!supabaseServiceKey)
+    missing.push("SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY");
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(", ")}`,
+    );
+  }
+
+  return {
+    stripeSecretKey,
+    stripeWebhookSecret,
+    supabaseUrl,
+    supabaseServiceKey,
+  };
 }
 
-// Initialize Stripe with API version 2025-05-28.basil
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-05-28.basil",
-});
+// Initialize clients lazily to avoid build-time errors
+let stripe: Stripe | null = null;
+let supabaseAdmin: ReturnType<typeof createClient<Database>> | null = null;
 
-// Initialize Supabase Admin client for database operations
-const supabaseAdmin = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!,
-  {
-    auth: { persistSession: false },
-  },
-);
+function getStripeClient() {
+  if (!stripe) {
+    const { stripeSecretKey } = getRequiredEnvVars();
+    stripe = new Stripe(stripeSecretKey, {
+      apiVersion: "2025-05-28.basil",
+    });
+  }
+  return stripe;
+}
+
+function getSupabaseClient() {
+  if (!supabaseAdmin) {
+    const { supabaseUrl, supabaseServiceKey } = getRequiredEnvVars();
+    supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false },
+    });
+  }
+  return supabaseAdmin;
+}
 
 // Helper function to update user in Supabase
 async function updateUser(userId: string | null) {
   if (!userId) {
     throw new Error("Cannot update user: userId is null or undefined");
   }
-  const { error } = await supabaseAdmin
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
     .from("users")
     .update({
       is_pro: true,
@@ -67,7 +94,8 @@ async function findUserByEmail(
     return null;
   }
 
-  const { data, error } = await supabaseAdmin
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
     .from("users")
     .select("id")
     .eq("email", email)
@@ -142,7 +170,8 @@ async function getUserIdFromCustomer(
   customerId: string,
 ): Promise<string | null> {
   try {
-    const customer = await stripe.customers.retrieve(customerId);
+    const stripeClient = getStripeClient();
+    const customer = await stripeClient.customers.retrieve(customerId);
     if (!customer.deleted && isValidEmail(customer.email)) {
       return await findUserByEmail(customer.email);
     }
@@ -160,25 +189,29 @@ async function getUserIdFromCustomer(
 export async function POST(request: NextRequest) {
   let event: Stripe.Event;
 
-  // Read raw body as text for signature verification
-  const body = await request.text();
-
-  // Get Stripe signature header
-  const signature = request.headers.get("stripe-signature");
-  if (!signature) {
-    console.error("⚠️ Missing stripe-signature header");
-    return new NextResponse(
-      JSON.stringify({ error: "Webhook signature verification failed" }),
-      { status: 400 },
-    );
-  }
-
-  // Verify webhook signature to ensure request is from Stripe
   try {
-    event = stripe.webhooks.constructEvent(
+    // Validate environment variables at request time
+    const { stripeWebhookSecret } = getRequiredEnvVars();
+    const stripeClient = getStripeClient();
+
+    // Read raw body as text for signature verification
+    const body = await request.text();
+
+    // Get Stripe signature header
+    const signature = request.headers.get("stripe-signature");
+    if (!signature) {
+      console.error("⚠️ Missing stripe-signature header");
+      return new NextResponse(
+        JSON.stringify({ error: "Webhook signature verification failed" }),
+        { status: 400 },
+      );
+    }
+
+    // Verify webhook signature to ensure request is from Stripe
+    event = stripeClient.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!,
+      stripeWebhookSecret,
     );
     console.log(`📨 Received webhook event: ${event.type} (ID: ${event.id})`);
   } catch (err) {
@@ -249,8 +282,9 @@ export async function POST(request: NextRequest) {
 
         // Get subscription to check metadata and status
         try {
+          const stripeClient = getStripeClient();
           const subscription =
-            await stripe.subscriptions.retrieve(subscriptionId);
+            await stripeClient.subscriptions.retrieve(subscriptionId);
 
           // Only process if subscription is active or trialing
           if (
@@ -341,10 +375,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    console.error(
-      `❌ Error processing webhook event ${event.type}:`,
-      errorMessage,
-    );
+    console.error(`❌ Error processing webhook event:`, errorMessage);
     return new NextResponse(
       JSON.stringify({ error: "Webhook processing failed" }),
       { status: 500 },
