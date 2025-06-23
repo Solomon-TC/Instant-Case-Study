@@ -4,25 +4,62 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Helper function to validate and get environment variables at runtime
+function getRequiredEnvVars(): {
+  openaiApiKey: string;
+  supabaseUrl: string;
+  supabaseServiceRoleKey: string;
+} {
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Validate required environment variables for server-side Supabase client
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const missing = [];
+  if (!openaiApiKey) missing.push("OPENAI_API_KEY");
+  if (!supabaseUrl) missing.push("SUPABASE_URL");
+  if (!supabaseServiceRoleKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
 
-if (!supabaseUrl) {
-  throw new Error("Missing environment variable: SUPABASE_URL");
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(", ")}`,
+    );
+  }
+
+  return {
+    openaiApiKey: openaiApiKey!,
+    supabaseUrl: supabaseUrl!,
+    supabaseServiceRoleKey: supabaseServiceRoleKey!,
+  };
 }
-if (!supabaseServiceRoleKey) {
-  throw new Error("Missing environment variable: SUPABASE_SERVICE_ROLE_KEY");
+
+// Initialize clients lazily to avoid build-time errors
+let openai: OpenAI | null = null;
+let supabase: ReturnType<typeof createClient> | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    const { openaiApiKey } = getRequiredEnvVars();
+    openai = new OpenAI({
+      apiKey: openaiApiKey,
+    });
+  }
+  return openai;
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+function getSupabaseClient() {
+  if (!supabase) {
+    const { supabaseUrl, supabaseServiceRoleKey } = getRequiredEnvVars();
+    supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
+  }
+  return supabase;
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize clients at request time
+    const openaiClient = getOpenAIClient();
+    const supabaseClient = getSupabaseClient();
+
     const body = await request.json();
     const {
       clientType,
@@ -52,7 +89,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check user's pro status and generation count
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: userError } = await supabaseClient
       .from("users")
       .select("is_pro, generation_count")
       .eq("id", userId)
@@ -90,7 +127,7 @@ Structure it like this:
 
 Output should be 250–350 words.`;
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openaiClient.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -118,7 +155,7 @@ Output should be 250–350 words.`;
 Case Study:
 ${generatedCaseStudy}`;
 
-    const socialCompletion = await openai.chat.completions.create({
+    const socialCompletion = await openaiClient.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -137,7 +174,7 @@ ${generatedCaseStudy}`;
     }
 
     // Save to Supabase
-    const { data, error: supabaseError } = await supabase
+    const { data, error: supabaseError } = await supabaseClient
       .from("case_studies")
       .insert({
         client_type: clientType,
@@ -155,7 +192,7 @@ ${generatedCaseStudy}`;
 
     // Increment user's generation count if not pro
     if (!user.is_pro) {
-      const { error: incrementError } = await supabase.rpc(
+      const { error: incrementError } = await supabaseClient.rpc(
         "increment_generation_count",
         { user_id: userId },
       );

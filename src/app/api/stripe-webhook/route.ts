@@ -9,7 +9,12 @@ export const preferredRegion = "home";
 export const runtime = "nodejs";
 
 // Helper function to validate and get environment variables at runtime
-function getRequiredEnvVars() {
+function getRequiredEnvVars(): {
+  stripeSecretKey: string;
+  stripeWebhookSecret: string;
+  supabaseUrl: string;
+  supabaseServiceKey: string;
+} {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -30,11 +35,12 @@ function getRequiredEnvVars() {
     );
   }
 
+  // TypeScript now knows these are defined due to the validation above
   return {
-    stripeSecretKey,
-    stripeWebhookSecret,
-    supabaseUrl,
-    supabaseServiceKey,
+    stripeSecretKey: stripeSecretKey!,
+    stripeWebhookSecret: stripeWebhookSecret!,
+    supabaseUrl: supabaseUrl!,
+    supabaseServiceKey: supabaseServiceKey!,
   };
 }
 

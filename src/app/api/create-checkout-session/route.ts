@@ -1,34 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 
-// Validate required environment variables at module level
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID;
-const NEXT_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
+// Helper function to validate and get environment variables at runtime
+function getRequiredEnvVars(): {
+  stripeSecretKey: string;
+  stripePriceId: string;
+  baseUrl: string;
+} {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  const stripePriceId = process.env.STRIPE_PRICE_ID;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 
-if (!STRIPE_SECRET_KEY || !STRIPE_PRICE_ID || !NEXT_PUBLIC_BASE_URL) {
-  console.error("Missing required environment variables:", {
-    STRIPE_SECRET_KEY: !!STRIPE_SECRET_KEY,
-    STRIPE_PRICE_ID: !!STRIPE_PRICE_ID,
-    NEXT_PUBLIC_BASE_URL: !!NEXT_PUBLIC_BASE_URL,
-  });
-  throw new Error(
-    "Missing required environment variables: STRIPE_SECRET_KEY, STRIPE_PRICE_ID, NEXT_PUBLIC_BASE_URL",
-  );
+  const missing = [];
+  if (!stripeSecretKey) missing.push("STRIPE_SECRET_KEY");
+  if (!stripePriceId) missing.push("STRIPE_PRICE_ID");
+  if (!baseUrl) missing.push("NEXT_PUBLIC_BASE_URL");
+
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missing.join(", ")}`,
+    );
+  }
+
+  return {
+    stripeSecretKey: stripeSecretKey!,
+    stripePriceId: stripePriceId!,
+    baseUrl: baseUrl!,
+  };
 }
 
-console.log("Environment variables loaded (excluding secrets):", {
-  STRIPE_SECRET_KEY: !!STRIPE_SECRET_KEY,
-  STRIPE_PRICE_ID: !!STRIPE_PRICE_ID,
-  NEXT_PUBLIC_BASE_URL: NEXT_PUBLIC_BASE_URL,
-});
+// Initialize Stripe client lazily to avoid build-time errors
+let stripe: Stripe | null = null;
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: "2025-05-28.basil",
-});
+function getStripeClient(): Stripe {
+  if (!stripe) {
+    const { stripeSecretKey } = getRequiredEnvVars();
+    stripe = new Stripe(stripeSecretKey, {
+      apiVersion: "2025-05-28.basil",
+    });
+  }
+  return stripe;
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Validate environment variables at request time
+    const { stripePriceId, baseUrl } = getRequiredEnvVars();
+    const stripeClient = getStripeClient();
+
     const body = await request.json();
     console.log("🟡 Stripe Checkout Request Body:", body);
 
@@ -42,7 +61,7 @@ export async function POST(request: NextRequest) {
       try {
         console.log(`Attempting to apply promo code: ${promoCode}`);
         // Retrieve promotion code object by code string
-        const promotionCodes = await stripe.promotionCodes.list({
+        const promotionCodes = await stripeClient.promotionCodes.list({
           code: promoCode,
           active: true,
           limit: 1,
@@ -69,12 +88,12 @@ export async function POST(request: NextRequest) {
       mode: "subscription",
       line_items: [
         {
-          price: STRIPE_PRICE_ID,
+          price: stripePriceId,
           quantity: 1,
         },
       ],
-      success_url: `${NEXT_PUBLIC_BASE_URL}/success`,
-      cancel_url: `${NEXT_PUBLIC_BASE_URL}/`,
+      success_url: `${baseUrl}/success`,
+      cancel_url: `${baseUrl}/`,
       metadata: userId ? { userId } : undefined,
       discounts,
     };
@@ -86,7 +105,7 @@ export async function POST(request: NextRequest) {
       metadata: sessionParams.metadata,
     });
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    const session = await stripeClient.checkout.sessions.create(sessionParams);
 
     console.log(`✅ Stripe session created successfully: ${session.id}`);
     return NextResponse.json({ sessionId: session.id });
