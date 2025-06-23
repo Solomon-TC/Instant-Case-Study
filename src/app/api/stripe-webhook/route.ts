@@ -56,10 +56,8 @@ async function updateUser(userId: string) {
 }
 
 // Helper function to find user by email
-async function findUserByEmail(
-  email: string | null | undefined,
-): Promise<string | null> {
-  // Return null if email is null, undefined, or empty string
+async function findUserByEmail(email: string | null): Promise<string | null> {
+  // Return null if email is null or empty string
   if (!email || email.trim() === "") {
     return null;
   }
@@ -143,8 +141,7 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
-              const email: string | null = (customer as Stripe.Customer).email;
-              userId = await findUserByEmail(email);
+              userId = await findUserByEmail(customer.email);
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
@@ -201,9 +198,7 @@ export async function POST(request: NextRequest) {
             try {
               const customer = await stripe.customers.retrieve(customerId);
               if (!customer.deleted) {
-                const email: string | null = (customer as Stripe.Customer)
-                  .email;
-                userId = await findUserByEmail(email);
+                userId = await findUserByEmail(customer.email);
               }
             } catch (error) {
               console.error("Error retrieving customer from Stripe:", error);
@@ -253,8 +248,7 @@ export async function POST(request: NextRequest) {
           try {
             const customer = await stripe.customers.retrieve(customerId);
             if (!customer.deleted) {
-              const email: string | null = (customer as Stripe.Customer).email;
-              userId = await findUserByEmail(email);
+              userId = await findUserByEmail(customer.email);
             }
           } catch (error) {
             console.error("Error retrieving customer from Stripe:", error);
