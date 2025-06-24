@@ -3,6 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 // Force dynamic rendering to prevent stale cached server rendering
@@ -116,6 +117,7 @@ export default function RootLayout({
         {children}
         <Toaster />
         <TempoInit />
+        <Analytics />
       </body>
     </html>
   );
