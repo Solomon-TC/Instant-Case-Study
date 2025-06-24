@@ -110,13 +110,7 @@ export default function UpgradeModal({
     }
   };
 
-  const features = [
-    "Unlimited case study generation",
-    "Priority AI processing",
-    "Advanced export options",
-    "Premium templates",
-    "Email support",
-  ];
+  const features = ["Unlimited case study generation"];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
