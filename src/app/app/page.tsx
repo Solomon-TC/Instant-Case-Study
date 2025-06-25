@@ -14,13 +14,28 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import type { CaseStudy, User } from "@/lib/supabase";
-import { FileDown, Copy, LogOut, Crown, AlertTriangle } from "lucide-react";
+import {
+  FileDown,
+  Copy,
+  LogOut,
+  Crown,
+  AlertTriangle,
+  User as UserIcon,
+  Trash2,
+} from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import AuthForm from "@/components/auth-form";
 import UpgradeModal from "@/components/upgrade-modal";
-import { DeleteAccountButton } from "@/components/delete-account-button";
+import { softDeleteUser } from "@/lib/soft-delete-user";
 
 // Force dynamic rendering to prevent stale cached server rendering
 export const dynamic = "force-dynamic";
@@ -78,6 +93,7 @@ export default function AppPage() {
     [],
   );
   const [isLoadingPrevious, setIsLoadingPrevious] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Session hydration and user data loading
   useEffect(() => {
@@ -254,6 +270,41 @@ export default function AppPage() {
       }
     } catch (error) {
       console.error("Error in fetchUserProfile:", error);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+
+    setIsDeleting(true);
+
+    try {
+      // Soft delete the user
+      await softDeleteUser(user.id);
+
+      // Show success message
+      toast({
+        title: "Account deleted",
+        description: "Your account has been successfully deleted.",
+      });
+
+      // Sign out the user
+      await supabase.auth.signOut({ scope: "global" });
+
+      // Redirect to landing page
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to delete account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -598,21 +649,12 @@ export default function AppPage() {
     !userProfile.is_pro && (userProfile.generation_count ?? 0) >= 2;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 pt-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div className="text-center flex-1">
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Instant Case Study
-            </h1>
-            <p className="text-lg text-gray-600">
-              Transform your project wins into compelling case studies in
-              minutes
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4">
+        <div className="relative mb-8">
+          {/* User Dropdown - Positioned absolutely in top right */}
+          <div className="absolute -top-4 right-0 flex items-center gap-3">
             {userProfile?.is_pro && (
               <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
                 <Crown className="h-4 w-4" />
@@ -620,22 +662,46 @@ export default function AppPage() {
               </div>
             )}
 
-            <div className="text-right">
-              <p className="text-sm text-gray-600">Welcome, {user.email}</p>
-              <p className="text-xs text-gray-500">
-                Generations: {remainingGenerations}
-              </p>
-            </div>
-
-            {user && (
-              <div className="flex items-center gap-2">
-                <DeleteAccountButton userId={user.id} />
-                <Button variant="outline" onClick={handleSignOut}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="flex items-center gap-2">
+                  <UserIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline">{user.email}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-1.5 text-sm text-gray-600">
+                  <div className="font-medium">{user.email}</div>
+                  <div className="text-xs text-gray-500">
+                    Generations: {remainingGenerations}
+                  </div>
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
-                </Button>
-              </div>
-            )}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {isDeleting ? "Deleting..." : "Delete Account"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Centered Title and Tagline */}
+          <div className="text-center pt-12">
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+              Instant Case Study
+            </h1>
+            <p className="text-lg text-gray-600">
+              Transform your project wins into compelling case studies in
+              minutes
+            </p>
           </div>
         </div>
 
@@ -657,7 +723,6 @@ export default function AppPage() {
             </AlertDescription>
           </Alert>
         )}
-
         {/* Form */}
         <Card className="mb-8">
           <CardHeader>
