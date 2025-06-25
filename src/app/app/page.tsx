@@ -20,6 +20,7 @@ import { FileDown, Copy, LogOut, Crown, AlertTriangle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import AuthForm from "@/components/auth-form";
 import UpgradeModal from "@/components/upgrade-modal";
+import { DeleteAccountButton } from "@/components/delete-account-button";
 
 // Force dynamic rendering to prevent stale cached server rendering
 export const dynamic = "force-dynamic";
@@ -112,6 +113,7 @@ export default function AppPage() {
           .from("users")
           .select("*")
           .eq("id", session.user.id)
+          .eq("is_deleted", false)
           .single();
 
         if (profileError) {
@@ -122,6 +124,7 @@ export default function AppPage() {
               email: session.user.email || "",
               is_pro: false,
               generation_count: 0,
+              is_deleted: false,
             };
 
             const { data: newUser, error: createError } = await supabase
@@ -209,6 +212,7 @@ export default function AppPage() {
         .from("users")
         .select("*")
         .eq("id", userId)
+        .eq("is_deleted", false)
         .single();
 
       if (error) {
@@ -222,6 +226,7 @@ export default function AppPage() {
             email: authUser.user?.email || "",
             is_pro: false,
             generation_count: 0,
+            is_deleted: false,
           };
 
           const { data: newUser, error: createError } = await supabase
@@ -623,10 +628,13 @@ export default function AppPage() {
             </div>
 
             {user && (
-              <Button variant="outline" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
+              <div className="flex items-center gap-2">
+                <DeleteAccountButton userId={user.id} />
+                <Button variant="outline" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </div>
             )}
           </div>
         </div>

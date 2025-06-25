@@ -65,6 +65,7 @@ export type Database = {
           email: string
           generation_count: number | null
           id: string
+          is_deleted: boolean | null
           is_pro: boolean | null
           updated_at: string | null
         }
@@ -73,6 +74,7 @@ export type Database = {
           email: string
           generation_count?: number | null
           id: string
+          is_deleted?: boolean | null
           is_pro?: boolean | null
           updated_at?: string | null
         }
@@ -81,6 +83,7 @@ export type Database = {
           email?: string
           generation_count?: number | null
           id?: string
+          is_deleted?: boolean | null
           is_pro?: boolean | null
           updated_at?: string | null
         }

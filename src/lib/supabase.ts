@@ -24,4 +24,21 @@ export interface User {
   generation_count: number | null;
   created_at: string | null;
   updated_at: string | null;
+  is_deleted: boolean | null;
+}
+
+// Soft delete utility function
+export async function softDeleteUser(userId: string) {
+  const { supabaseBrowser } = await import("./supabase-browser");
+  const supabase = supabaseBrowser;
+
+  const { error } = await supabase
+    .from("users")
+    .update({ is_deleted: true })
+    .eq("id", userId);
+
+  if (error) {
+    console.error("Failed to soft delete user:", error);
+    throw new Error("Soft delete failed");
+  }
 }
