@@ -14,7 +14,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Instant Case Study – AI-Generated Client Wins",
   description:
-    "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate your client proof, impress leads, and close deals",
+    "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate client proof, win deals, and build your brand — no writing required.",
   keywords: [
     "case study generator",
     "AI case studies",
@@ -31,15 +31,15 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL("https://instantcasestudy.com"),
+  metadataBase: new URL("https://www.instantcasestudy.com"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
     title: "Instant Case Study – AI-Generated Client Wins",
     description:
-      "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate your client proof, impress leads, and close deals",
-    url: "https://instantcasestudy.com",
+      "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate client proof, win deals, and build your brand — no writing required.",
+    url: "https://www.instantcasestudy.com",
     siteName: "Instant Case Study",
     images: [
       {
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Instant Case Study – AI-Generated Client Wins",
     description:
-      "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate your client proof, impress leads, and close deals",
+      "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate client proof, win deals, and build your brand — no writing required.",
     images: ["/og-image.jpg"],
   },
   robots: {
@@ -88,7 +88,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebApplication",
               name: "Instant Case Study",
-              url: "https://instantcasestudy.com",
+              url: "https://www.instantcasestudy.com",
               description:
                 "Generate professional case studies instantly with AI. Perfect for freelancers, agencies, and startups.",
               applicationCategory: "BusinessApplication",
