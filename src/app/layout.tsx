@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Instant Case Study – AI-Generated Client Wins",
+  title: "Instant Case Study – AI Case Study Generator",
   description:
-    "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate client proof, win deals, and build your brand — no writing required.",
+    "Turn client wins into polished case studies instantly using AI. Build trust, close deals, and grow your business – without writing a single paragraph.",
   keywords: [
     "case study generator",
     "AI case studies",
@@ -31,22 +31,22 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL("https://www.instantcasestudy.com"),
+  metadataBase: new URL("https://instantcasestudy.com"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Instant Case Study – AI-Generated Client Wins",
+    title: "Instant Case Study – AI Case Study Generator",
     description:
-      "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate client proof, win deals, and build your brand — no writing required.",
-    url: "https://www.instantcasestudy.com",
+      "Turn client wins into polished case studies instantly using AI.",
+    url: "https://instantcasestudy.com",
     siteName: "Instant Case Study",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Instant Case Study - AI-Generated Client Wins",
+        alt: "Instant Case Study",
       },
     ],
     locale: "en_US",
@@ -54,10 +54,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Instant Case Study – AI-Generated Client Wins",
+    title: "Instant Case Study – AI Case Study Generator",
     description:
-      "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate client proof, win deals, and build your brand — no writing required.",
-    images: ["/og-image.jpg"],
+      "Turn client wins into polished case studies instantly using AI.",
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,
@@ -88,7 +88,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebApplication",
               name: "Instant Case Study",
-              url: "https://www.instantcasestudy.com",
+              url: "https://instantcasestudy.com",
               description:
                 "Generate professional case studies instantly with AI. Perfect for freelancers, agencies, and startups.",
               applicationCategory: "BusinessApplication",
