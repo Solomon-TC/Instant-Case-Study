@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Instant Case Study | AI-Powered Case Study Generator",
+  title: "Instant Case Study – AI-Generated Client Wins",
   description:
-    "Generate professional case studies instantly with AI. Perfect for freelancers, agencies, and startups. Transform your project wins into compelling case studies in minutes.",
+    "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate your client proof, impress leads, and close deals",
   keywords: [
     "case study generator",
     "AI case studies",
@@ -36,9 +36,9 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "Instant Case Study | AI-Powered Case Study Generator",
+    title: "Instant Case Study – AI-Generated Client Wins",
     description:
-      "Generate professional case studies instantly with AI. Perfect for freelancers, agencies, and startups.",
+      "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate your client proof, impress leads, and close deals",
     url: "https://instantcasestudy.com",
     siteName: "Instant Case Study",
     images: [
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "Instant Case Study - AI-Powered Case Study Generator",
+        alt: "Instant Case Study - AI-Generated Client Wins",
       },
     ],
     locale: "en_US",
@@ -54,9 +54,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Instant Case Study | AI-Powered Case Study Generator",
+    title: "Instant Case Study – AI-Generated Client Wins",
     description:
-      "Generate professional case studies instantly with AI. Perfect for freelancers, agencies, and startups.",
+      "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing. Turn bullet points into polished AI case studies. Automate your client proof, impress leads, and close deals",
     images: ["/og-image.jpg"],
   },
   robots: {
