@@ -49,8 +49,6 @@ function AuthFormClient({ onAuthSuccess }: AuthFormProps = {}) {
   useEffect(() => {
     if (!isMounted) return;
 
-    let timeoutId: NodeJS.Timeout;
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -71,7 +69,11 @@ function AuthFormClient({ onAuthSuccess }: AuthFormProps = {}) {
     });
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
+      // Clean up any OAuth timeout that might be stored on window
+      if (typeof window !== "undefined" && (window as any).oauthTimeoutId) {
+        clearTimeout((window as any).oauthTimeoutId);
+        delete (window as any).oauthTimeoutId;
+      }
       subscription.unsubscribe();
     };
   }, [supabase, handleAuthSuccess, isMounted]);
