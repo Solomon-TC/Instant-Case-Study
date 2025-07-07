@@ -95,25 +95,56 @@ export default function AppPage() {
   const [isLoadingPrevious, setIsLoadingPrevious] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Session hydration and user data loading
+  // Enhanced session hydration and user data loading
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        // Get current session
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
+        console.log("🔄 App page: Initializing session...");
 
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          throw new Error("Failed to get session");
+        // Enhanced session retrieval with comprehensive retry logic
+        let session = null;
+        let sessionError = null;
+        let attempts = 0;
+        const maxAttempts = 5; // Increased attempts
+
+        while (!session && attempts < maxAttempts) {
+          console.log(
+            `🔍 App session check attempt ${attempts + 1}/${maxAttempts}`,
+          );
+
+          const result = await supabase.auth.getSession();
+          session = result.data.session;
+          sessionError = result.error;
+
+          if (sessionError) {
+            console.error(
+              `Session error (attempt ${attempts + 1}):`,
+              sessionError,
+            );
+            attempts++;
+            if (attempts < maxAttempts) {
+              await new Promise((resolve) => setTimeout(resolve, 1500)); // Longer delay
+              continue;
+            }
+            throw new Error("Failed to get session after multiple attempts");
+          }
+
+          if (!session && attempts < maxAttempts - 1) {
+            attempts++;
+            console.log(
+              `⏳ No session found, waiting before retry ${attempts + 1}/${maxAttempts}`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, 1500)); // Longer delay
+          } else {
+            break;
+          }
         }
 
         if (!session?.user) {
+          console.log("ℹ️ No authenticated user found in app page");
           setUser(null);
           setUserProfile(null);
           setPreviousCaseStudies([]);
@@ -122,6 +153,7 @@ export default function AppPage() {
         }
 
         // Set user
+        console.log("✅ User session found in app page:", session.user.email);
         setUser(session.user);
 
         // Fetch user profile

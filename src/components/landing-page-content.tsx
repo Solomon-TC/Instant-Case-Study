@@ -3,51 +3,147 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { createBrowserClient } from "@supabase/ssr";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 export function LandingPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const router = useRouter();
-
-  // Initialize Supabase client for session detection
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  const supabase = supabaseBrowser;
 
   useEffect(() => {
     const checkAuthAndRedirect = async () => {
       try {
         setIsCheckingAuth(true);
+        console.log("🔄 Landing page: Checking authentication status...");
 
-        // Get current session
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
+        // Wait longer for any ongoing auth processes
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          // Continue to show landing page on session error
-          setIsCheckingAuth(false);
-          setIsLoading(false);
-          return;
+        // Enhanced session checking with comprehensive retry logic
+        let session = null;
+        let attempts = 0;
+        const maxAttempts = 5; // Increased attempts
+
+        while (!session && attempts < maxAttempts) {
+          console.log(
+            `🔍 Session check attempt ${attempts + 1}/${maxAttempts}`,
+          );
+
+          const {
+            data: { session: currentSession },
+            error: sessionError,
+          } = await supabase.auth.getSession();
+
+          if (sessionError) {
+            console.error(
+              `Session error (attempt ${attempts + 1}):`,
+              sessionError,
+            );
+            attempts++;
+            if (attempts < maxAttempts) {
+              await new Promise((resolve) => setTimeout(resolve, 1500)); // Longer delay
+              continue;
+            }
+            // Show landing page on persistent session error
+            break;
+          }
+
+          session = currentSession;
+          if (!session && attempts < maxAttempts - 1) {
+            attempts++;
+            console.log(
+              `⏳ No session found, waiting before retry ${attempts + 1}/${maxAttempts}`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, 1500)); // Longer delay
+          } else {
+            break;
+          }
         }
 
         // If user is authenticated, redirect to /app
         if (session?.user) {
-          console.log("User is authenticated, redirecting to /app");
-          router.push("/app");
+          console.log("✅ User is authenticated, redirecting to /app");
+          console.log("👤 User:", session.user.email);
+
+          // Enhanced user profile verification with retry logic
+          let profileCreated = false;
+          let profileAttempts = 0;
+          const maxProfileAttempts = 3;
+
+          while (!profileCreated && profileAttempts < maxProfileAttempts) {
+            try {
+              const { data: userProfile, error: profileError } = await supabase
+                .from("users")
+                .select("id, email, is_deleted")
+                .eq("id", session.user.id)
+                .eq("is_deleted", false)
+                .single();
+
+              if (profileError && profileError.code === "PGRST116") {
+                // Create user profile if it doesn't exist
+                console.log(
+                  `📝 Creating user profile (attempt ${profileAttempts + 1})...`,
+                );
+                const { error: createError } = await supabase
+                  .from("users")
+                  .insert({
+                    id: session.user.id,
+                    email: session.user.email || "",
+                    is_pro: false,
+                    generation_count: 0,
+                    is_deleted: false,
+                  });
+
+                if (createError) {
+                  console.error("Profile creation error:", createError);
+                  profileAttempts++;
+                  if (profileAttempts < maxProfileAttempts) {
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                    continue;
+                  }
+                } else {
+                  console.log("✅ User profile created successfully");
+                  profileCreated = true;
+                }
+              } else if (!profileError) {
+                console.log("✅ User profile already exists");
+                profileCreated = true;
+              } else {
+                console.error("Profile fetch error:", profileError);
+                profileAttempts++;
+                if (profileAttempts < maxProfileAttempts) {
+                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                  continue;
+                }
+              }
+              break;
+            } catch (profileError) {
+              console.error("Profile operation error:", profileError);
+              profileAttempts++;
+              if (profileAttempts < maxProfileAttempts) {
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+                continue;
+              }
+              break;
+            }
+          }
+
+          // Always redirect even if profile operations fail
+          console.log("🔄 Redirecting to /app...");
+
+          // Add a small delay before redirect to ensure everything is settled
+          setTimeout(() => {
+            window.location.href = "/app";
+          }, 500);
           return;
         }
 
-        // User is not authenticated, show landing page
+        console.log("ℹ️ No authenticated user found, showing landing page");
         setIsCheckingAuth(false);
         setIsLoading(false);
       } catch (error) {
         console.error("Error checking authentication:", error);
-        // Show landing page on error
         setIsCheckingAuth(false);
         setIsLoading(false);
       }
@@ -59,9 +155,24 @@ export function LandingPageContent() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(
+        "🔄 Landing page auth state change:",
+        event,
+        session?.user?.email,
+      );
+
       if (event === "SIGNED_IN" && session?.user) {
-        console.log("User signed in, redirecting to /app");
-        router.push("/app");
+        console.log(
+          "✅ User signed in via auth state change, redirecting to /app",
+        );
+        // Small delay to ensure state is fully updated
+        setTimeout(() => {
+          window.location.href = "/app";
+        }, 300);
+      } else if (event === "SIGNED_OUT") {
+        console.log("ℹ️ User signed out, staying on landing page");
+        setIsCheckingAuth(false);
+        setIsLoading(false);
       }
     });
 
@@ -71,6 +182,7 @@ export function LandingPageContent() {
   }, [router, supabase]);
 
   const handleGetStarted = () => {
+    console.log("🔄 Get Started clicked, navigating to /app");
     router.push("/app");
   };
 
