@@ -67,8 +67,8 @@ export default function OAuthDebug() {
 
   const testSessionFromUrl = async () => {
     console.log("🧪 Testing session from current URL...");
-    const { data, error } = await supabase.auth.getSessionFromUrl();
-    console.log("Session from URL:", { data, error });
+    const { data, error } = await supabase.auth.getSession();
+    console.log("Session from URL (via getSession):", { data, error });
   };
 
   const clearSession = async () => {
