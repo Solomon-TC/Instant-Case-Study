@@ -211,8 +211,9 @@ export function LandingPageContent() {
 
           {/* Subtitle */}
           <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Turn your project wins into professional case studies in seconds —
-            just fill in your results and let AI do the writing.
+            Generate case studies with AI in seconds. The best AI case study
+            tool to create professional case studies that impress clients and
+            win more deals.
           </p>
 
           {/* CTA Button */}
@@ -245,11 +246,11 @@ export function LandingPageContent() {
                 </svg>
               </div>
               <h3 className="text-xl font-semibold text-gray-900">
-                AI-Powered Writing
+                AI Case Study Generation
               </h3>
               <p className="text-gray-600">
-                Transform your project details into compelling, professional
-                case studies.
+                Our AI case study generator transforms your project details into
+                compelling, professional case studies automatically.
               </p>
             </div>
 
@@ -307,11 +308,11 @@ export function LandingPageContent() {
           <div className="pt-20 pb-16">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                Turn This Into This In Seconds
+                How Our AI Case Study Generator Works
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Simply fill out your project details and watch AI transform them
-                into a professional case study instantly.
+                Simply fill out your project details and watch our AI case study
+                tool transform them into a professional case study instantly.
               </p>
             </div>
 
@@ -474,12 +475,12 @@ export function LandingPageContent() {
           <div className="pt-20 pb-16">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                Perfect For Growing Businesses
+                Who Uses Our AI Case Study Generator
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Whether you're just starting out or scaling up, our AI-powered
-                case study generator helps you showcase your wins and attract
-                more clients.
+                Whether you're just starting out or scaling up, our AI case
+                study generator helps you showcase your wins and attract more
+                clients with professional case studies.
               </p>
             </div>
 
@@ -505,7 +506,7 @@ export function LandingPageContent() {
                 </h3>
                 <p className="text-gray-600 text-sm">
                   Build credibility and win more clients by showcasing your
-                  successful projects with professional case studies.
+                  successful projects with AI-generated case studies.
                 </p>
               </div>
 
@@ -554,7 +555,7 @@ export function LandingPageContent() {
                   Agencies
                 </h3>
                 <p className="text-gray-600 text-sm">
-                  Streamline your client reporting and create impressive case
+                  Streamline your client reporting and create impressive AI case
                   studies that help you retain and attract clients.
                 </p>
               </div>
@@ -590,11 +591,12 @@ export function LandingPageContent() {
           <div className="pt-16 pb-20">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                Everything You Need to Get Started
+                AI Case Study Generator Features
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                From free generations to professional exports, we've got all the
-                features you need to create and share compelling case studies.
+                From free AI case study generation to professional exports,
+                we've got all the features you need to create and share
+                compelling case studies with AI.
               </p>
             </div>
 
@@ -616,11 +618,12 @@ export function LandingPageContent() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  3 Free Generations
+                  3 Free AI Case Studies
                 </h3>
                 <p className="text-gray-600">
-                  Try our AI case study generator with 3 free generations. No
-                  credit card required to get started.
+                  Try our AI case study generator with 3 free case study
+                  generations. No credit card required to start generating case
+                  studies with AI.
                 </p>
               </div>
 
@@ -641,11 +644,11 @@ export function LandingPageContent() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Export to PDF
+                  Export AI Case Studies to PDF
                 </h3>
                 <p className="text-gray-600">
-                  Download your case studies as professional PDF documents,
-                  perfect for client presentations and proposals.
+                  Download your AI-generated case studies as professional PDF
+                  documents, perfect for client presentations and proposals.
                 </p>
               </div>
 
@@ -666,11 +669,11 @@ export function LandingPageContent() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Share to Socials
+                  Share AI Case Studies
                 </h3>
                 <p className="text-gray-600">
                   Get AI-generated social media posts for LinkedIn, Twitter, and
-                  more to amplify your case studies.
+                  more to amplify your AI case studies.
                 </p>
               </div>
 
@@ -716,11 +719,11 @@ export function LandingPageContent() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Lightning Fast
+                  Lightning Fast AI Generation
                 </h3>
                 <p className="text-gray-600">
-                  Generate professional case studies in under 30 seconds. No
-                  more spending hours on writing and formatting.
+                  Generate professional case studies with AI in under 30
+                  seconds. No more spending hours on writing and formatting.
                 </p>
               </div>
 
@@ -757,10 +760,10 @@ export function LandingPageContent() {
                 size="lg"
                 className="text-lg px-8 py-4 h-auto font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
               >
-                Start Creating Case Studies →
+                Generate Case Studies with AI →
               </Button>
               <p className="text-sm text-gray-500 mt-3">
-                No credit card required • 3 free generations
+                No credit card required • 3 free AI case study generations
               </p>
             </div>
           </div>
@@ -769,11 +772,11 @@ export function LandingPageContent() {
           <div className="pt-20 pb-16">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-                What Our Customers Say
+                AI Case Study Generator Reviews
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Join other professionals who are already creating compelling
-                case studies with our AI-powered platform.
+                Join other professionals who are already generating compelling
+                case studies with our AI case study generator.
               </p>
             </div>
 
@@ -800,7 +803,7 @@ export function LandingPageContent() {
                     <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">
                       We're collecting feedback from our amazing users. Check
                       back soon to see what professionals are saying about how
-                      Instant Case Study has transformed their client
+                      our AI case study generator has transformed their client
                       presentations and business growth.
                     </p>
                   </div>

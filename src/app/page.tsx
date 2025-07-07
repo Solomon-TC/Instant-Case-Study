@@ -3,16 +3,15 @@ import type { Metadata } from "next";
 
 // SEO Metadata
 export const metadata: Metadata = {
-  title:
-    "Instant Case Study - Turn Project Wins into Professional Case Studies",
+  title: "AI Case Study Generator - Create Professional Case Studies with AI",
   description:
-    "Generate professional case studies in seconds with AI. Transform your project results into compelling, polished case studies that impress clients and win more deals.",
+    "The #1 AI case study generator. Generate case studies with AI in seconds. Transform your project wins into professional case studies that impress clients. Try our AI case study tool free.",
   keywords:
-    "case study generator, AI writing, project documentation, client presentation, professional case studies",
+    "ai case study generator, case study generator, ai case study, generate case studies with ai, ai case study tool, automated case study generator, case study ai, professional case studies",
   openGraph: {
-    title: "Instant Case Study - AI-Powered Case Study Generator",
+    title: "AI Case Study Generator - Generate Case Studies with AI",
     description:
-      "Turn your project wins into professional case studies in seconds — just fill in your results and let AI do the writing.",
+      "The best AI case study generator to create professional case studies in seconds. Generate case studies with AI for free.",
     type: "website",
   },
 };

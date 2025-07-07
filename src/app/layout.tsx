@@ -12,16 +12,22 @@ export const dynamic = "force-dynamic";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Instant Case Study – AI Case Study Generator",
+  title: "AI Case Study Generator - Generate Case Studies with AI Instantly",
   description:
-    "Turn client wins into polished case studies instantly using AI. Build trust, close deals, and grow your business – without writing a single paragraph.",
+    "The best AI case study generator to create professional case studies in seconds. Generate case studies with AI for freelancers, agencies, and businesses. Try our AI case study tool free.",
   keywords: [
+    "ai case study generator",
     "case study generator",
-    "AI case studies",
+    "ai case study",
+    "generate case studies with ai",
+    "ai case study tool",
+    "automated case study generator",
+    "case study ai",
+    "ai powered case study generator",
     "business case studies",
+    "professional case studies",
     "freelancer tools",
     "agency tools",
-    "startup tools",
   ],
   authors: [{ name: "Instant Case Study" }],
   creator: "Instant Case Study",
@@ -36,9 +42,9 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "Instant Case Study – AI Case Study Generator",
+    title: "AI Case Study Generator - Generate Case Studies with AI",
     description:
-      "Turn client wins into polished case studies instantly using AI.",
+      "The best AI case study generator. Create professional case studies in seconds with our AI case study tool. Free to try.",
     url: "https://instantcasestudy.com",
     siteName: "Instant Case Study",
     images: [
@@ -54,9 +60,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Instant Case Study – AI Case Study Generator",
+    title: "AI Case Study Generator - Generate Case Studies with AI",
     description:
-      "Turn client wins into polished case studies instantly using AI.",
+      "The best AI case study generator. Create professional case studies in seconds with our AI case study tool.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -87,12 +93,15 @@ export default function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebApplication",
-              name: "Instant Case Study",
+              name: "AI Case Study Generator - Instant Case Study",
+              alternateName: "AI Case Study Tool",
               url: "https://instantcasestudy.com",
               description:
-                "Generate professional case studies instantly with AI. Perfect for freelancers, agencies, and startups.",
+                "The best AI case study generator to create professional case studies with AI in seconds. Generate case studies with AI for businesses, freelancers, and agencies.",
               applicationCategory: "BusinessApplication",
               operatingSystem: "Web",
+              keywords:
+                "ai case study generator, case study generator, ai case study, generate case studies with ai",
               offers: {
                 "@type": "Offer",
                 price: "9.99",
